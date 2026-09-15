@@ -382,7 +382,7 @@
        Keeping the preview in sync with the export makes the controls useful
        before the user downloads the PDF. */
     --preview-margin:56px;
-    --pv-logo:44px; --pv-title:36px; --pv-title-gap:34px; --pv-title-pad:18px;
+    --pv-title:36px; --pv-title-gap:34px; --pv-title-pad:18px;
     --pv-h1:25px; --pv-h1-top:36px; --pv-h1-bottom:8px;
     --pv-h2:16.5px; --pv-h2-top:24px; --pv-h2-bottom:6px; --pv-h2-pad:12px;
     --pv-h3:13px; --pv-h3-top:18px; --pv-h3-bottom:4px;
@@ -393,13 +393,6 @@
     font-family:'Inter',sans-serif;
     color:var(--ink);
     position:relative;
-  }
-  #page .doc-logo{
-    display:block;
-    height:var(--pv-logo);
-    width:auto;
-    margin:0 0 16px;
-    object-fit:contain;
   }
   #page h1.doc-title{
     font-family:'Fraunces',serif;
@@ -1364,7 +1357,6 @@ function render(){
   const body = blocksToPreviewHtml(blocks);
 
   $page.innerHTML =
-    `<img class="doc-logo" src="LOGOPNG.png" alt="">` +
     `<h1 class="doc-title">${escapeHtml(title)}</h1>` +
     (body.trim() ? body : '<p class="empty"></p>');
     const emptyEl = $page.querySelector('.empty');
@@ -1380,7 +1372,7 @@ function applyPreviewOptions(){
   const scale = pdfScale || 1;
   $page.style.setProperty('--preview-margin', margin + 'px');
   const previewLengths = {
-    '--pv-logo':44, '--pv-title':36, '--pv-title-gap':34, '--pv-title-pad':18,
+    '--pv-title':36, '--pv-title-gap':34, '--pv-title-pad':18,
     '--pv-h1':25, '--pv-h1-top':36, '--pv-h1-bottom':8,
     '--pv-h2':16.5, '--pv-h2-top':24, '--pv-h2-bottom':6, '--pv-h2-pad':12,
     '--pv-h3':13, '--pv-h3-top':18, '--pv-h3-bottom':4,
@@ -1651,14 +1643,6 @@ async function exportPdf(){
         ctx.fillText(String(text), hasArabic(text) ? wPx - pad : pad, aPx);
         return { img: arCanvas.toDataURL('image/png'), wPt: wPx * s, aPt: aPx * s, dPt: dPx * s };
       }catch(e){ return null; }
-    }
-
-    // Brand logo at the top of the document.
-    if(logoAsset){
-      const logoW = 170;
-      const logoH = logoW * (logoAsset.h / logoAsset.w);
-      pdf.addImage(logoAsset.data, 'PNG', M, M, logoW, logoH);
-      y += logoH + 28;
     }
 
     // ---- Title block ---------------------------------------------------
@@ -2170,11 +2154,7 @@ function exportWord(){
       .replace(/[^a-z0-9\u0600-\u06FF]+/g,'-').replace(/(^-|-$)/g,'').slice(0,80) || 'document';
     const filename = slug + '.doc';
 
-    let pageHtml = $page.innerHTML;
-    const logoUrl = (logoAsset && logoAsset.data)
-      ? logoAsset.data
-      : ((location && location.origin) ? location.origin + '/LOGOPNG.png' : 'LOGOPNG.png');
-    pageHtml = pageHtml.replace(/<img class="doc-logo"[^>]*>/, '<img class="doc-logo" src="' + logoUrl + '">');
+    const pageHtml = $page.innerHTML;
 
     const isArabic = docHasArabic();
     const align = effectiveAlign();
