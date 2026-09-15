@@ -84,6 +84,14 @@
   html[dir=rtl] .smart-card{flex-direction:row-reverse;}
   html[dir=rtl] .theme-btn span:first-child{margin-right:0; margin-left:0;}
   html[dir=rtl] .btn-row{direction:ltr;}
+  html[dir=rtl] .pickers .picker{direction:rtl;}
+  html[dir=rtl] .pickers .picker span{text-align:right;}
+  html[dir=rtl] .pdf-opts label,
+  html[dir=rtl] .align-opt,
+  html[dir=rtl] .docs-card label{text-align:right;}
+  html[dir=rtl] .pdf-opts select,
+  html[dir=rtl] .align-opt select{direction:rtl;}
+  html[dir=rtl] .doc-actions{direction:rtl;}
   .side{
     background:var(--panel);
     border-right:1px solid var(--line);
@@ -270,6 +278,29 @@
     background:#fff;
     color:var(--ink);
     cursor:pointer;
+  }
+  .align-opt{
+    margin-top:14px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .align-opt select{
+    width:100%;
+    padding:7px 6px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:12.5px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+    cursor:pointer;
+    text-transform:none;
   }
 
   .docs-card{margin-top:14px; display:flex; flex-direction:column; gap:8px;}
@@ -541,6 +572,16 @@ Review what you learned and try planting a seed at home. Watch how it grows day 
       </label>
     </div>
 
+    <div class="align-opt">
+      <label data-i18n="alignOpt">Text alignment
+        <select id="pdfAlign" title="Alignment of the preview and exported PDF text">
+          <option value="left" data-i18n-opt="alignLeft">Left</option>
+          <option value="center" data-i18n-opt="alignCenter">Center</option>
+          <option value="right" data-i18n-opt="alignRight">Right</option>
+        </select>
+      </label>
+    </div>
+
     <div class="docs-card">
       <label for="docList" data-i18n="savedDocs">Saved documents</label>
       <select id="docList" title="Load a saved document">
@@ -594,6 +635,7 @@ let titleTouched = false; // user manually set the document title
 let pdfFormat  = 'a4';    // paper size for export
 let pdfMargins = 'normal';// narrow | normal | wide
 let pdfScale   = 1;       // text size multiplier for export
+let textAlign  = 'left';  // text alignment: left | center | right
 let lang = 'en';          // interface language: en | fr | ar
 
 /* ------------------------------------------------------------------ */
@@ -611,6 +653,7 @@ const L10N = {
     pageOpt:'Page', marginsOpt:'Margins', textSizeOpt:'Text size',
     marginsNarrow:'Narrow', marginsNormal:'Normal', marginsWide:'Wide',
     sizeSmall:'Small', sizeNormal:'Normal', sizeLarge:'Large',
+    alignOpt:'Text alignment', alignLeft:'Left', alignCenter:'Center', alignRight:'Right',
     savedDocs:'Saved documents', noDocs:'— no saved documents —',
     saveCurrent:'Save current', delete:'Delete',
     exportBtn:'Export as PDF', copyHtml:'Copy HTML', clearBtn:'Clear', loadTxt:'Load .txt',
@@ -635,6 +678,7 @@ const L10N = {
     pageOpt:'Page', marginsOpt:'Marges', textSizeOpt:'Taille du texte',
     marginsNarrow:'Étroites', marginsNormal:'Normales', marginsWide:'Larges',
     sizeSmall:'Petit', sizeNormal:'Normal', sizeLarge:'Grand',
+    alignOpt:'Alignement du texte', alignLeft:'Gauche', alignCenter:'Centré', alignRight:'Droite',
     savedDocs:'Documents enregistrés', noDocs:'— aucun document —',
     saveCurrent:'Enregistrer', delete:'Supprimer',
     exportBtn:'Exporter en PDF', copyHtml:'Copier HTML', clearBtn:'Effacer', loadTxt:'Ouvrir .txt',
@@ -659,6 +703,7 @@ const L10N = {
     pageOpt:'الورقة', marginsOpt:'الهوامش', textSizeOpt:'حجم النص',
     marginsNarrow:'ضيقة', marginsNormal:'عادية', marginsWide:'واسعة',
     sizeSmall:'صغير', sizeNormal:'عادي', sizeLarge:'كبير',
+    alignOpt:'محاذاة النص', alignLeft:'يسار', alignCenter:'وسط', alignRight:'يمين',
     savedDocs:'المستندات المحفوظة', noDocs:'— لا توجد مستندات محفوظة —',
     saveCurrent:'حفظ الحالي', delete:'حذف',
     exportBtn:'تصدير PDF', copyHtml:'نسخ HTML', clearBtn:'مسح', loadTxt:'تحميل .txt',
@@ -717,6 +762,7 @@ const $cAccent2Dark= document.getElementById('cAccent2Dark');
 const $pdfFormat  = document.getElementById('pdfFormat');
 const $pdfMargins = document.getElementById('pdfMargins');
 const $pdfScale   = document.getElementById('pdfScale');
+const $pdfAlign   = document.getElementById('pdfAlign');
 const $docList    = document.getElementById('docList');
 const $fileInput  = document.getElementById('fileInput');
 const $langSel    = document.getElementById('langSel');
@@ -738,6 +784,7 @@ function save(){
       pdfFormat: pdfFormat,
       pdfMargins: pdfMargins,
       pdfScale: pdfScale,
+      textAlign: textAlign,
       lang: lang
     }));
   }catch(e){}
@@ -757,6 +804,7 @@ function loadSaved(){
     if(data.pdfMargins) pdfMargins = data.pdfMargins;
     if(data.pdfScale) pdfScale = data.pdfScale;
     if(data.lang) lang = data.lang;
+    if(data.textAlign) textAlign = data.textAlign; else if(lang === 'ar') textAlign = 'right';
   }catch(e){}
 }
 
@@ -801,6 +849,7 @@ function saveCurrentDoc(){
     pdfFormat: pdfFormat,
     pdfMargins: pdfMargins,
     pdfScale: pdfScale,
+    textAlign: textAlign,
     ts: Date.now()
   };
   if(idx >= 0) list[idx] = entry; else list.push(entry);
@@ -821,6 +870,7 @@ function loadDoc(name){
   if(doc.pdfFormat) pdfFormat = doc.pdfFormat;
   if(doc.pdfMargins) pdfMargins = doc.pdfMargins;
   if(doc.pdfScale) pdfScale = doc.pdfScale;
+  if(doc.textAlign) textAlign = doc.textAlign;
   syncColorInputs();
   buildThemeButtons();
   syncPdfControls();
@@ -845,13 +895,15 @@ function syncPdfControls(){
   $pdfFormat.value = pdfFormat;
   $pdfMargins.value = pdfMargins;
   $pdfScale.value = String(pdfScale);
+  $pdfAlign.value = textAlign;
 }
-[$pdfFormat, $pdfMargins, $pdfScale].forEach(el=>{
+[$pdfFormat, $pdfMargins, $pdfScale, $pdfAlign].forEach(el=>{
   el.addEventListener('change', ()=>{
     pdfFormat = $pdfFormat.value;
     pdfMargins = $pdfMargins.value;
     pdfScale = parseFloat($pdfScale.value) || 1;
-    drawPageGuides(); save();
+    textAlign = $pdfAlign.value;
+    drawPageGuides(); render(); save();
   });
 });
 $docList.addEventListener('change', ()=>{ if($docList.value) loadDoc($docList.value); });
@@ -1191,6 +1243,7 @@ function removeFirstLine(raw){
 
 function render(){
   applyThemeVars($page);
+  $page.style.textAlign = textAlign;
   const { title, blocks } = buildDocument();
   const body = blocksToPreviewHtml(blocks);
 
@@ -1655,21 +1708,37 @@ if(block.type === 'h3'){
     // Render a segment line at baseline y, starting at x. Returns nothing.
     function drawSegments(segments, x, baselineY, fontFamily, size, color){
       const serif = fontFamily === FONT_SERIF;
+      const al = textAlign === 'center' || textAlign === 'right' ? textAlign : 'left';
       pdf.setTextColor(...color);
       // Any Arabic in the line: rasterize the whole line (logical order) and
-      // right-align it, so it starts from the right margin and the canvas text
-      // engine applies correct shaping + bidi inside the single image.
+      // honour the chosen horizontal alignment.
       if(segments.some(s => hasArabic(s.text))){
         const lineText = segments.map(s => s.text).join('');
         let bold = false, italic = false;
         for(const s of segments){ if(hasArabic(s.text)){ bold = s.bold; italic = s.italic; break; } }
         const spr = arabicSprite(lineText, bold, italic, size, color, serif);
         if(spr){
-          pdf.addImage(spr.img, 'PNG', contentRight - spr.wPt, baselineY - spr.aPt, spr.wPt, spr.aPt + spr.dPt);
+          const ix = al === 'center' ? M + (contentW - spr.wPt) / 2 : (al === 'right' ? contentRight - spr.wPt : x);
+          pdf.addImage(spr.img, 'PNG', ix, baselineY - spr.aPt, spr.wPt, spr.aPt + spr.dPt);
           return;
         }
       }
+      // Measure the whole line first (same engine as drawing) so the chosen
+      // alignment places the line exactly.
+      let lineW = 0;
+      segments.forEach(s=>{
+        if(hasArabic(s.text)){
+          const w = arabicWidthPt(s.text, s.bold, s.italic, size);
+          lineW += (w != null) ? w : 0;
+          return;
+        }
+        pdf.setFont(fontFamily, s.bold ? 'bold' : (s.italic ? 'italic' : 'normal'));
+        pdf.setFontSize(size);
+        lineW += pdf.getTextWidth(s.text);
+      });
       let cx = x;
+      if(al === 'center') cx = M + (contentW - lineW) / 2;
+      else if(al === 'right') cx = contentRight - lineW;
       segments.forEach(s=>{
         if(hasArabic(s.text)){
           const spr = arabicSprite(s.text, s.bold, s.italic, size, color, serif);
