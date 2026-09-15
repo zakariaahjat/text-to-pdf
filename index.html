@@ -563,20 +563,23 @@ Review what you learned and try planting a seed at home. Watch how it grows day 
     </div>
 
     <div class="pdf-opts">
-      <label data-i18n="pageOpt">Page
+      <label data-i18n-label="pageOpt">
+        <span data-i18n="pageOpt">Page</span>
         <select id="pdfFormat" title="Paper size for the exported PDF">
           <option value="a4">A4</option>
           <option value="letter">Letter</option>
         </select>
       </label>
-      <label data-i18n="marginsOpt">Margins
+      <label data-i18n-label="marginsOpt">
+        <span data-i18n="marginsOpt">Margins</span>
         <select id="pdfMargins" title="Page margins for the exported PDF">
           <option value="narrow" data-i18n-opt="marginsNarrow">Narrow</option>
           <option value="normal" selected data-i18n-opt="marginsNormal">Normal</option>
           <option value="wide" data-i18n-opt="marginsWide">Wide</option>
         </select>
       </label>
-      <label data-i18n="textSizeOpt">Text size
+      <label data-i18n-label="textSizeOpt">
+        <span data-i18n="textSizeOpt">Text size</span>
         <select id="pdfScale" title="Overall text size of the exported PDF">
           <option value="0.9" data-i18n-opt="sizeSmall">Small</option>
           <option value="1" selected data-i18n-opt="sizeNormal">Normal</option>
@@ -586,7 +589,8 @@ Review what you learned and try planting a seed at home. Watch how it grows day 
     </div>
 
     <div class="align-opt">
-      <label data-i18n="alignOpt">Text alignment
+      <label data-i18n-label="alignOpt">
+        <span data-i18n="alignOpt">Text alignment</span>
         <select id="pdfAlign" title="Alignment of the preview and exported PDF text">
           <option value="left" data-i18n-opt="alignLeft">Left</option>
           <option value="center" data-i18n-opt="alignCenter">Center</option>
@@ -758,10 +762,12 @@ function applyLanguage(){
   document.documentElement.lang = lang;
   document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
   document.querySelectorAll('[data-i18n]').forEach(el=>{
+    if(el.children.length) return; // keep labels that contain controls intact
     const key = el.getAttribute('data-i18n');
     if(L[key] !== undefined) el.textContent = L[key];
   });
   document.querySelectorAll('[data-i18n-opt]').forEach(el=>{
+    if(el.children.length) return;
     const key = el.getAttribute('data-i18n-opt');
     if(L[key] !== undefined) el.textContent = L[key];
   });
