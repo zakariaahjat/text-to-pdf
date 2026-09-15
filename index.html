@@ -369,7 +369,17 @@
     width:100%;
     max-width:760px;
     min-height:1000px;
-    padding:64px 56px;
+    /* These variables are updated by the Page, Margins and Text size controls.
+       Keeping the preview in sync with the export makes the controls useful
+       before the user downloads the PDF. */
+    --preview-margin:56px;
+    --pv-logo:44px; --pv-title:36px; --pv-title-gap:34px; --pv-title-pad:18px;
+    --pv-h1:25px; --pv-h1-top:36px; --pv-h1-bottom:8px;
+    --pv-h2:16.5px; --pv-h2-top:24px; --pv-h2-bottom:6px; --pv-h2-pad:12px;
+    --pv-h3:13px; --pv-h3-top:18px; --pv-h3-bottom:4px;
+    --pv-body:14.5px; --pv-para-gap:12px; --pv-list-gap:14px; --pv-list-pad:24px;
+    --pv-li-gap:5px; --pv-rule-gap:22px;
+    padding:calc(var(--preview-margin) + 8px) var(--preview-margin);
     box-shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
     font-family:'Inter',sans-serif;
     color:var(--ink);
@@ -377,7 +387,7 @@
   }
   #page .doc-logo{
     display:block;
-    height:44px;
+    height:var(--pv-logo);
     width:auto;
     margin:0 0 16px;
     object-fit:contain;
@@ -385,10 +395,10 @@
   #page h1.doc-title{
     font-family:'Fraunces',serif;
     font-weight:700;
-    font-size:36px;
+    font-size:var(--pv-title);
     line-height:1.15;
-    margin:0 0 34px;
-    padding-bottom:18px;
+    margin:0 0 var(--pv-title-gap);
+    padding-bottom:var(--pv-title-pad);
     border-bottom:3px solid var(--accent,#C8843C);
     color:var(--ink);
     overflow-wrap:anywhere;
@@ -396,43 +406,46 @@
   #page h1.section{
     font-family:'Fraunces',serif;
     font-weight:600;
-    font-size:25px;
+    font-size:var(--pv-h1);
     line-height:1.25;
     color:var(--accent-dark,#8C5A24);
-    margin:36px 0 8px;
+    margin:var(--pv-h1-top) 0 var(--pv-h1-bottom);
   }
   #page h2.section{
     font-family:'Inter',sans-serif;
     font-weight:600;
-    font-size:16.5px;
+    font-size:var(--pv-h2);
     line-height:1.35;
     color:var(--accent2-dark,#4A5A48);
-    margin:24px 0 6px;
-    padding-left:12px;
+    margin:var(--pv-h2-top) 0 var(--pv-h2-bottom);
+    padding-left:var(--pv-h2-pad);
     border-left:3px solid var(--accent2,#7B9C77);
   }
   #page h3.section{
     font-family:'Inter',sans-serif;
     font-weight:700;
-    font-size:13px;
+    font-size:var(--pv-h3);
     line-height:1.35;
     color:var(--ink-soft);
     letter-spacing:.04em;
-    margin:18px 0 4px;
+    margin:var(--pv-h3-top) 0 var(--pv-h3-bottom);
   }
   #page p{
-    font-size:14.5px;
+    font-size:var(--pv-body);
     line-height:1.75;
-    margin:0 0 12px;
+    margin:0 0 var(--pv-para-gap);
     color:#33393F;
   }
-  #page ul{margin:0 0 14px; padding-left:24px;}
-  #page ol{margin:0 0 14px; padding-left:24px;}
-  #page li{font-size:14.5px; line-height:1.7; margin-bottom:5px; color:#33393F;}
+  #page ul{margin:0 0 var(--pv-list-gap); padding-left:var(--pv-list-pad);}
+  #page ol{margin:0 0 var(--pv-list-gap); padding-left:var(--pv-list-pad);}
+  #page li{font-size:var(--pv-body); line-height:1.7; margin-bottom:var(--pv-li-gap); color:#33393F;}
   #page strong{font-weight:700; color:var(--ink);}
   #page em{font-style:italic;}
-  #page hr{border:none; border-top:1px solid var(--line); margin:22px 0;}
-  #page .empty{color:var(--ink-soft); font-size:14px; font-style:italic;}
+  #page hr{border:none; border-top:1px solid var(--line); margin:var(--pv-rule-gap) 0;}
+  #page .empty{color:var(--ink-soft); font-size:var(--pv-body); font-style:italic;}
+  #page[data-align="right"] h2.section{border-left:0; padding-left:0; border-right:3px solid var(--accent2,#7B9C77); padding-right:var(--pv-h2-pad);}
+  #page[data-align="center"] h2.section{border-left:0; padding-left:0;}
+  #page[dir="rtl"] ul, #page[dir="rtl"] ol{padding-left:0; padding-right:var(--pv-list-pad);}
 
   .page-guide{
     position:absolute;
@@ -457,7 +470,7 @@
     .app{grid-template-columns:1fr;}
     .side{position:static; max-height:none; border-right:none; border-bottom:1px solid var(--line);}
     .stage{padding:24px 12px; max-height:none;}
-    #page{padding:36px 28px;}
+    #page{padding:calc(var(--preview-margin) + 8px) var(--preview-margin);}
   }
 .drag-hint{font-size:11.5px; color:var(--ink-soft);}
 
@@ -636,7 +649,21 @@ let pdfFormat  = 'a4';    // paper size for export
 let pdfMargins = 'normal';// narrow | normal | wide
 let pdfScale   = 1;       // text size multiplier for export
 let textAlign  = 'left';  // text alignment: left | center | right
+let textAlignOverride = false; // user manually picked the alignment
 let lang = 'en';          // interface language: en | fr | ar
+
+function docHasArabic(extra){
+  let _t = '';
+  if(typeof $input !== 'undefined' && $input && $input.value) _t += String($input.value);
+  if(typeof $title !== 'undefined' && $title && $title.value) _t += ' ' + String($title.value);
+  if(extra) _t += ' ' + String(extra);
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(_t);
+}
+// Effective alignment: Arabic documents start from the right by default,
+// any other language starts from the left, until the user picks something.
+function effectiveAlign(extra){
+  return (docHasArabic(extra) && !textAlignOverride) ? 'right' : textAlign;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Language / translations                                            */
@@ -785,6 +812,7 @@ function save(){
       pdfMargins: pdfMargins,
       pdfScale: pdfScale,
       textAlign: textAlign,
+      textAlignOverride: textAlignOverride,
       lang: lang
     }));
   }catch(e){}
@@ -804,7 +832,8 @@ function loadSaved(){
     if(data.pdfMargins) pdfMargins = data.pdfMargins;
     if(data.pdfScale) pdfScale = data.pdfScale;
     if(data.lang) lang = data.lang;
-    if(data.textAlign) textAlign = data.textAlign; else if(lang === 'ar') textAlign = 'right';
+    if(data.textAlignOverride) textAlignOverride = true;
+    if(data.textAlign) textAlign = data.textAlign; else textAlign = (lang === 'ar' ? 'right' : 'left');
   }catch(e){}
 }
 
@@ -850,6 +879,7 @@ function saveCurrentDoc(){
     pdfMargins: pdfMargins,
     pdfScale: pdfScale,
     textAlign: textAlign,
+    textAlignOverride: textAlignOverride,
     ts: Date.now()
   };
   if(idx >= 0) list[idx] = entry; else list.push(entry);
@@ -871,6 +901,7 @@ function loadDoc(name){
   if(doc.pdfMargins) pdfMargins = doc.pdfMargins;
   if(doc.pdfScale) pdfScale = doc.pdfScale;
   if(doc.textAlign) textAlign = doc.textAlign;
+  textAlignOverride = !!doc.textAlignOverride;
   syncColorInputs();
   buildThemeButtons();
   syncPdfControls();
@@ -895,7 +926,7 @@ function syncPdfControls(){
   $pdfFormat.value = pdfFormat;
   $pdfMargins.value = pdfMargins;
   $pdfScale.value = String(pdfScale);
-  $pdfAlign.value = textAlign;
+  $pdfAlign.value = effectiveAlign();
 }
 [$pdfFormat, $pdfMargins, $pdfScale, $pdfAlign].forEach(el=>{
   el.addEventListener('change', ()=>{
@@ -903,6 +934,7 @@ function syncPdfControls(){
     pdfMargins = $pdfMargins.value;
     pdfScale = parseFloat($pdfScale.value) || 1;
     textAlign = $pdfAlign.value;
+    textAlignOverride = true;
     drawPageGuides(); render(); save();
   });
 });
@@ -1047,7 +1079,7 @@ function isSentence(l){
   if(/\b(the|a|an|is|are|was|were|and|but|or|of|to|for|in|on|with|it|this|that|they|you|we|he|she)\b/i.test(l)) return true;
   return l.length > 80;
 }
-function headingInfo(l){
+function headingInfo(l, context = {}){
   if(!l || l.length === 0) return null;
   const len = l.length;
   if(looksLikeListLine(l)) return null;
@@ -1059,20 +1091,33 @@ function headingInfo(l){
   const allCaps  = /^[A-Z0-9][A-Z0-9\s\-_&:'",.()]{2,}$/.test(l) && nw <= 9;
   const kwStrong = /^(chapter|chapters|lesson|lessons|part|parts|section|sections|module|modules|unit|units|topic|topics|lab|labs|exercise|exercises|worksheet|worksheets|quiz|quizzes|test|tests|exam|exams|assignment|assignments)\b/i.test(l);
   const kwWeak   = /^(introduction|overview|conclusion|conclusions|summary|summaries|objective|objectives|contents?|references?|appendix|appendices|glossary|key terms|vocabulary|procedure|procedures|materials?|activities?|homework|discussion|discussions|recap|notes|directions?|instructions?|answers?|review|reviews|learning outcomes)\b/i.test(l);
-  const endsColon    = /:$/.test(l);
+  // Arabic has no title case or capitals, so recognise the common document
+  // labels directly. This gives Arabic text the same three coloured heading
+  // levels as English/French text without requiring Markdown markers.
+  const arMain = /^(الفصل|الدرس|الوحدة|الباب|المحور|المحاضرة|المبحث|الجزء)(?:\s|$|[0-9٠-٩])/.test(l);
+  const arSection = /^(مقدمة|تمهيد|الأهداف|اهداف|أهداف|المحتويات|الموضوع|العناصر|التعريف|المفاهيم|الشرح|الخطوات|الطريقة|الأنشطة|التطبيقات|الأمثلة|مثال|الخلاصة|الخاتمة|الملخص|المراجع|التقويم|التمارين|الأسئلة|ملاحظة|تنبيه|نصيحة|إرشادات|ارشادات)(?:\s|$|[:：])/.test(l);
+  const endsColon    = /[:：]\s*$/.test(l);
   const endsSentence = /[.!?]["']?\s*$/.test(l);
   const firstCap     = /^[A-Z]/.test(l);
   const cap  = words.filter(w=>/^[A-Z][a-z]/.test(w) || /^[A-Z]{2,}/.test(w)).length;
   const titleCase = nw >= 2 && firstCap && cap/nw >= 0.6;
+  const hasArabicLetters = /[\u0621-\u064A]/.test(l);
+  // A short Arabic label separated from its paragraph is usually a subheading.
+  // This catches natural text such as "دورة حياة النبات" even when it does not
+  // start with one of the keywords above, while avoiding normal sentences.
+  const arStandalone = hasArabicLetters && nw >= 2 && nw <= 9 && len <= 60 &&
+    !endsSentence && (context.beforeBlank || context.afterBlank || context.nextLong);
 
-  if(nw === 1 && !endsColon && !allCaps && !kwStrong && !kwWeak) return null;
+  if(nw === 1 && !endsColon && !allCaps && !kwStrong && !kwWeak && !arMain && !arSection) return null;
   if(endsSentence && !allCaps && isSentence(l)) return null;
 
   let level = null;
-  if(kwStrong)                   level = 1;
+  if(arMain || kwStrong)         level = 1;
+  else if(arSection)             level = /^(ملاحظة|تنبيه|نصيحة|إرشادات|ارشادات)(?:\s|$|[:：])/.test(l) ? 3 : 2;
   else if(kwWeak)                level = 2;
   else if(allCaps)               level = 1;
   else if(endsColon && nw <= 10) level = 2;
+  else if(arStandalone)          level = context.beforeBlank && context.afterBlank ? 2 : 3;
   else if(titleCase && nw <= 7)  level = 2;
   else if(nw <= 4 && !endsSentence && firstCap) level = 2;
   else if(nw <= 8 && !endsSentence && firstCap) level = 3;
@@ -1105,6 +1150,16 @@ function smartParseToBlocks(raw){
     if(tokens.length){
       blocks.push({ type: 'p', html: inlineMarkdown(tokens.join(' ')) });
     }
+  }
+  function smartHeadingInfo(index){
+    const current = lines[index].trim();
+    const previous = index > 0 ? lines[index - 1].trim() : '';
+    const next = index + 1 < n ? lines[index + 1].trim() : '';
+    return headingInfo(current, {
+      beforeBlank: index === 0 || !previous,
+      afterBlank: index + 1 >= n || !next,
+      nextLong: next.length > 60 || isSentence(next)
+    });
   }
 
   let i = 0;
@@ -1150,10 +1205,12 @@ function smartParseToBlocks(raw){
     }
 
     // Headings.
-    const hi = headingInfo(t);
+    const hi = smartHeadingInfo(i);
     if(hi){
       let text = stripTrailingColon(t);
-      if(/:$/.test(t)){
+      // In Arabic a colon commonly introduces a normal explanatory sentence;
+      // do not turn that sentence into a list merely because it is short.
+      if(/[:：]\s*$/.test(t) && !/[\u0621-\u064A]/.test(t)){
         // A heading ending in ":" absorbs the next short lines as a list.
         const gathered = [];
         let j = i + 1;
@@ -1161,7 +1218,7 @@ function smartParseToBlocks(raw){
           const nt = lines[j].trim();
           if(!nt) break;
           if(looksLikeListLine(nt)){ gathered.push(nt); j++; continue; }
-          if(isSentence(nt) || headingInfo(nt)) break;
+          if(isSentence(nt) || smartHeadingInfo(j)) break;
           const na = lines[j + 1] ? lines[j + 1].trim() : '';
           const contentAfter = na && !looksLikeListLine(na) && na !== '---' && na !== '***' && na !== '___' && !na.startsWith('#');
           if(headingCandidate(nt, contentAfter)) break;
@@ -1190,7 +1247,7 @@ function smartParseToBlocks(raw){
       if(looksLikeListLine(nt)) break;
       if(nt === '---' || nt === '***' || nt === '___') break;
       if(nt.startsWith('# ') || nt.startsWith('## ') || nt.startsWith('### ')) break;
-      if(headingInfo(nt)) break;
+      if(smartHeadingInfo(j)) break;
       const na = lines[j + 1] ? lines[j + 1].trim() : '';
       const contentAfter = na && !looksLikeListLine(na) && na !== '---' && na !== '***' && na !== '___' && !na.startsWith('#');
       if(headingCandidate(nt, contentAfter)) break;
@@ -1281,7 +1338,10 @@ function removeFirstLine(raw){
 
 function render(){
   applyThemeVars($page);
-  $page.style.textAlign = textAlign;
+  applyPreviewOptions();
+  const effAlign = effectiveAlign();
+  $page.style.textAlign = effAlign;
+  $page.dataset.align = effAlign;
   const { title, blocks } = buildDocument();
   const body = blocksToPreviewHtml(blocks);
 
@@ -1296,11 +1356,33 @@ function render(){
   updateHint();
 }
 
+function applyPreviewOptions(){
+  const marginMap = { narrow:40, normal:56, wide:70 };
+  const margin = marginMap[pdfMargins] || marginMap.normal;
+  const scale = pdfScale || 1;
+  $page.style.setProperty('--preview-margin', margin + 'px');
+  const previewLengths = {
+    '--pv-logo':44, '--pv-title':36, '--pv-title-gap':34, '--pv-title-pad':18,
+    '--pv-h1':25, '--pv-h1-top':36, '--pv-h1-bottom':8,
+    '--pv-h2':16.5, '--pv-h2-top':24, '--pv-h2-bottom':6, '--pv-h2-pad':12,
+    '--pv-h3':13, '--pv-h3-top':18, '--pv-h3-bottom':4,
+    '--pv-body':14.5, '--pv-para-gap':12, '--pv-list-gap':14, '--pv-list-pad':24,
+    '--pv-li-gap':5, '--pv-rule-gap':22
+  };
+  Object.entries(previewLengths).forEach(([name, px])=>{
+    $page.style.setProperty(name, (px * scale) + 'px');
+  });
+
+  // Arabic content should read RTL even if the interface language is English.
+  // The explicit alignment selector still decides where every line sits.
+  const isArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test($input.value + ' ' + $title.value);
+  $page.dir = isArabic ? 'rtl' : 'ltr';
+}
+
 /* ------------------------------------------------------------------ */
 /*  Page guides                                                        */
 /* ------------------------------------------------------------------ */
 const A4_W_PT = 595.28, A4_H_PT = 841.89;
-const PDF_MARGIN = 56; // pt
 
 function drawPageGuides(){
   $stageIn.querySelectorAll('.page-guide').forEach(n=>n.remove());
@@ -1313,8 +1395,11 @@ function drawPageGuides(){
   const contentW = $page.clientWidth - padL - padR;
   if(contentW <= 0) return;
 
-  const pdfContentW = A4_W_PT - PDF_MARGIN * 2;
-  const usableH = A4_H_PT - PDF_MARGIN * 2;
+  const [pageW, pageHpt] = pdfFormat === 'letter' ? [612, 792] : [A4_W_PT, A4_H_PT];
+  const marginMap = { narrow:40, normal:56, wide:70 };
+  const pdfMargin = marginMap[pdfMargins] || marginMap.normal;
+  const pdfContentW = pageW - pdfMargin * 2;
+  const usableH = pageHpt - pdfMargin * 2;
   const ptPerPx = pdfContentW / contentW;
   const pageHeightPx = usableH / ptPerPx;
 
@@ -1393,6 +1478,10 @@ async function loadFonts(pdf){
 
 async function exportPdf(){
   const { title: docTitle, blocks } = buildDocument();
+  // Let the whole export closure honor the document-aware alignment. The
+  // parsed blocks are checked too so Node tests without a DOM behave alike.
+  const blockText = blocks.map(b=> b.html ? stripTags(b.html) : (b.items || []).join(' ')).join(' ');
+  textAlign = effectiveAlign(blockText + ' ' + docTitle);
   const rawTitle = (docTitle || 'document');
   const slug = rawTitle.toLowerCase()
     .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,80);
@@ -1532,8 +1621,10 @@ async function exportPdf(){
         ctx.clearRect(0, 0, wPx, aPx + dPx);
         ctx.font = arabicFontCss(bold ? 700 : 400, italic, sizePt, serif);
         ctx.textBaseline = 'alphabetic';
+        ctx.direction = hasArabic(text) ? 'rtl' : 'ltr';
+        ctx.textAlign = hasArabic(text) ? 'right' : 'left';
         ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
-        ctx.fillText(String(text), pad, aPx);
+        ctx.fillText(String(text), hasArabic(text) ? wPx - pad : pad, aPx);
         return { img: arCanvas.toDataURL('image/png'), wPt: wPx * s, aPt: aPx * s, dPt: dPx * s };
       }catch(e){ return null; }
     }
