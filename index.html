@@ -9,7 +9,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Amiri:wght@400;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
+<script id="jspdf-cdn-fallback">
+  // Fallback to the public CDN only if the bundled copy failed to load.
+  if(!window.jspdf){
+    document.write('<script src="https:\/\/cdnjs.cloudflare.com\/ajax\/libs\/jspdf\/2.5.1\/jspdf.umd.min.js"><\/script>');
+  }
+</script>
 <style>
   :root{
     --paper:#FBF8F2;
@@ -1470,6 +1476,9 @@ async function loadFonts(pdf){
     if(!b64){
       b64 = await fetchFontBase64(url);
       if(!b64) continue;
+      // Guard against a 200 response that is not a real font (proxy/error
+      // page). Feeding garbage to jsPDF can poison its font table.
+      if(!/^(AAEAAA|AQA[A-Za-z0-9+/]|T1RUT|dHJ1|dHRj)/.test(b64)) continue;
       fontCache[family][style] = b64;
     }
     try{
@@ -1503,6 +1512,9 @@ async function exportPdf(){
       try { await document.fonts.ready; } catch(e){}
     }
 
+    if(!window.jspdf || !window.jspdf.jsPDF){
+      throw new Error('PDF engine (jsPDF) failed to load');
+    }
     const { jsPDF } = window.jspdf;
     const [PW, PH] = pdfFormat === 'letter' ? [612, 792] : [595.28, 841.89];
     const MARGIN_MAP = { narrow: 40, normal: 56, wide: 70 };
