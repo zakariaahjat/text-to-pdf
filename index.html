@@ -330,6 +330,9 @@
   }
 
   .actions{margin-top:auto; display:flex; flex-direction:column; gap:9px;}
+  .export-row{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .btn.alt{background:var(--accent-dark,#8C5A24); color:#fff;}
+  .btn.alt:hover{filter:brightness(1.08);}
   .btn{
     border:none;
     padding:13px 16px;
@@ -617,7 +620,10 @@ Review what you learned and try planting a seed at home. Watch how it grows day 
     </div>
 
     <div class="actions">
-      <button class="btn primary" id="exportBtn" data-i18n="exportBtn">Export as PDF</button>
+      <div class="export-row">
+        <button class="btn primary" id="exportBtn" data-i18n="exportBtn">Export as PDF</button>
+        <button class="btn primary alt" id="wordBtn" type="button" data-i18n="exportWordBtn">Export as Word</button>
+      </div>
       <div class="btn-row">
         <button class="btn ghost" id="copyBtn" type="button" data-i18n="copyHtml">Copy HTML</button>
         <button class="btn ghost" id="clearBtn" type="button" data-i18n="clearBtn">Clear</button>
@@ -693,12 +699,12 @@ const L10N = {
     alignOpt:'Text alignment', alignLeft:'Left', alignCenter:'Center', alignRight:'Right',
     savedDocs:'Saved documents', noDocs:'— no saved documents —',
     saveCurrent:'Save current', delete:'Delete',
-    exportBtn:'Export as PDF', copyHtml:'Copy HTML', clearBtn:'Clear', loadTxt:'Load .txt',
+    exportBtn:'Export as PDF', exportWordBtn:'Export as Word', copyHtml:'Copy HTML', clearBtn:'Clear', loadTxt:'Load .txt',
     statusPreparing:'Preparing PDF…', statusFonts:'Loading fonts…',
     statusSaved:'Saved \u201C$1\u201D', statusLoaded:'Loaded \u201C$1\u201D',
     statusDeleted:'Deleted.', statusCleared:'Cleared.',
     statusCopyOk:'Rendered HTML copied to clipboard.', statusCopyFail:'Copy failed.',
-    statusExportFail:'Export failed. See console.',
+    statusExportFail:'Export failed. See console.', statusWordFail:'Word export failed.',
     promptDocName:'Document name?',
     promptConfirmClear:'Clear the text and title?',
     promptConfirmDelete:'Delete \u201C$1\u201D?',
@@ -718,12 +724,12 @@ const L10N = {
     alignOpt:'Alignement du texte', alignLeft:'Gauche', alignCenter:'Centré', alignRight:'Droite',
     savedDocs:'Documents enregistrés', noDocs:'— aucun document —',
     saveCurrent:'Enregistrer', delete:'Supprimer',
-    exportBtn:'Exporter en PDF', copyHtml:'Copier HTML', clearBtn:'Effacer', loadTxt:'Ouvrir .txt',
+    exportBtn:'Exporter en PDF', exportWordBtn:'Exporter en Word', copyHtml:'Copier HTML', clearBtn:'Effacer', loadTxt:'Ouvrir .txt',
     statusPreparing:'Préparation du PDF…', statusFonts:'Chargement des polices…',
     statusSaved:'Enregistré \u201C$1\u201D', statusLoaded:'Chargé \u201C$1\u201D',
     statusDeleted:'Supprimé.', statusCleared:'Effacé.',
     statusCopyOk:'HTML copié dans le presse-papiers.', statusCopyFail:'Échec de la copie.',
-    statusExportFail:'Échec de l\u2019export. Voir la console.',
+    statusExportFail:'Échec de l\u2019export. Voir la console.', statusWordFail:'Échec de l\u2019export Word.',
     promptDocName:'Nom du document ?',
     promptConfirmClear:'Effacer le texte et le titre ?',
     promptConfirmDelete:'Supprimer \u201C$1\u201D ?',
@@ -743,12 +749,12 @@ const L10N = {
     alignOpt:'محاذاة النص', alignLeft:'يسار', alignCenter:'وسط', alignRight:'يمين',
     savedDocs:'المستندات المحفوظة', noDocs:'— لا توجد مستندات محفوظة —',
     saveCurrent:'حفظ الحالي', delete:'حذف',
-    exportBtn:'تصدير PDF', copyHtml:'نسخ HTML', clearBtn:'مسح', loadTxt:'تحميل .txt',
+    exportBtn:'تصدير PDF', exportWordBtn:'تصدير Word', copyHtml:'نسخ HTML', clearBtn:'مسح', loadTxt:'تحميل .txt',
     statusPreparing:'جارٍ تجهيز PDF…', statusFonts:'جارٍ تحميل الخطوط…',
     statusSaved:'تم حفظ «$1»', statusLoaded:'تم تحميل «$1»',
     statusDeleted:'تم الحذف.', statusCleared:'تم المسح.',
     statusCopyOk:'تم نسخ HTML.', statusCopyFail:'فشلت النسخ.',
-    statusExportFail:'فشل التصدير. راجع وحدة التحكم.',
+    statusExportFail:'فشل التصدير. راجع وحدة التحكم.', statusWordFail:'فشل تصدير Word.',
     promptDocName:'اسم المستند؟',
     promptConfirmClear:'مسح النص والعنوان؟',
     promptConfirmDelete:'حذف «$1»؟',
@@ -2053,6 +2059,7 @@ $smartToggle.addEventListener('change', ()=>{
 });
 
 $export.addEventListener('click', exportPdf);
+document.getElementById('wordBtn').addEventListener('click', exportWord);
 
 document.getElementById('langSel').addEventListener('change', e => {
   lang = e.target.value;
@@ -2141,6 +2148,69 @@ function preloadLogo(){
     }catch(e){}
   };
   img.src = 'LOGOPNG.png';
+}
+
+/* ------------------------------------------------------------------ */
+/*  Word (.doc) export                                                 */
+/* ------------------------------------------------------------------ */
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 1500);
+}
+
+function exportWord(){
+  try{
+    const { title } = buildDocument();
+    const slug = (title || 'document').toLowerCase()
+      .replace(/[^a-z0-9\u0600-\u06FF]+/g,'-').replace(/(^-|-$)/g,'').slice(0,80) || 'document';
+    const filename = slug + '.doc';
+
+    let pageHtml = $page.innerHTML;
+    const logoUrl = (logoAsset && logoAsset.data)
+      ? logoAsset.data
+      : ((location && location.origin) ? location.origin + '/LOGOPNG.png' : 'LOGOPNG.png');
+    pageHtml = pageHtml.replace(/<img class="doc-logo"[^>]*>/, '<img class="doc-logo" src="' + logoUrl + '">');
+
+    const isArabic = docHasArabic();
+    const align = effectiveAlign();
+    const dir = isArabic ? 'rtl' : 'ltr';
+    const fs = pdfScale || 1;
+    const sz = { title:19*fs, h1:16*fs, h2:12*fs, h3:10*fs, body:10.5*fs };
+    const marginPt = { narrow:40, normal:56, wide:70 }[pdfMargins] || 56;
+    const pageW = pdfFormat === 'letter' ? '8.5in' : '8.27in';
+    const pageH = pdfFormat === 'letter' ? '11in' : '11.69in';
+    const side = isArabic ? 'right' : 'left';
+
+    const css =
+      'body { font-family:\'Inter\',Calibri,Arial,sans-serif; font-size:' + sz.body + 'pt; color:#33393F; direction:' + dir + '; text-align:' + align + '; line-height:1.5; }\n' +
+      'p { margin:0 0 ' + (8*fs) + 'pt; }\n' +
+      'h1.doc-title { font-family:\'Fraunces\',Georgia,serif; font-size:' + sz.title + 'pt; font-weight:700; color:#20262E; margin:0 0 ' + (16*fs) + 'pt; padding-bottom:' + (8*fs) + 'pt; border-bottom:3px solid ' + colors.accent + '; overflow-wrap:anywhere; }\n' +
+      'h1.section { font-family:\'Fraunces\',Georgia,serif; font-size:' + sz.h1 + 'pt; font-weight:600; color:' + colors.accentDark + '; margin:' + (18*fs) + 'pt 0 ' + (6*fs) + 'pt; }\n' +
+      'h2.section { font-size:' + sz.h2 + 'pt; font-weight:600; color:' + colors.accent2Dark + '; margin:' + (14*fs) + 'pt 0 ' + (5*fs) + 'pt; border-' + side + ':3px solid ' + colors.accent2 + '; padding-' + side + ':' + (8*fs) + 'pt; }\n' +
+      'h3.section { font-size:' + sz.h3 + 'pt; font-weight:600; color:#5B6470; margin:' + (10*fs) + 'pt 0 ' + (4*fs) + 'pt; }\n' +
+      'ul, ol { margin:0 0 ' + (9*fs) + 'pt; padding-' + side + ':24pt; }\n' +
+      'li { margin-bottom:' + (3*fs) + 'pt; }\n' +
+      'hr { border:none; border-top:1px solid #E4DFD3; margin:' + (12*fs) + 'pt 0; }\n' +
+      'img.doc-logo { height:64pt; }\n';
+
+    const html =
+      '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+      '<head><meta charset="utf-8"><title>' + title + '</title>' +
+      '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->' +
+      '<style>@page WordSection1{size:' + pageW + ' ' + pageH + ';margin:' + marginPt + 'pt;}div.WordSection1{page:WordSection1;}' + css + '</style></head>' +
+      '<body><div class="WordSection1">' + pageHtml + '</div></body></html>';
+
+    downloadBlob(new Blob(['\ufeff' + html], { type:'application/msword' }), filename);
+    setStatus(t('statusSaved', filename), false, true);
+  }catch(e){
+    console.error(e);
+    setStatus(t('statusWordFail'), true);
+  }
 }
 
 /* ------------------------------------------------------------------ */
