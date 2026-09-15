@@ -217,6 +217,54 @@
   }
   .doc-title-input:focus{outline:none; border-color:#C8843C; box-shadow:0 0 0 3px rgba(200,132,60,.15);}
 
+  .pdf-opts{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin:14px 0 2px;
+  }
+  .pdf-opts label{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .pdf-opts select{
+    width:100%;
+    padding:7px 6px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:12.5px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+    cursor:pointer;
+  }
+
+  .docs-card{margin-top:14px; display:flex; flex-direction:column; gap:8px;}
+  .docs-card select{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+  }
+  .doc-actions{display:flex; gap:8px;}
+  .doc-actions .btn{padding:9px 12px; font-size:12.5px; flex:1;}
+
+  textarea.drag-hover{
+    outline:2px dashed #C8843C;
+    outline-offset:-4px;
+    background:#FFF9EF;
+  }
+
   .actions{margin-top:auto; display:flex; flex-direction:column; gap:9px;}
   .btn{
     border:none;
@@ -238,7 +286,7 @@
   .btn.primary:disabled{opacity:.55; cursor:default; transform:none;}
   .btn.ghost{background:#F4EFE4; color:var(--ink);}
   .btn.ghost:hover{background:#EAE3D4;}
-  .btn-row{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .btn-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
   .status{
     font-size:12px;
     color:var(--ink-soft);
@@ -433,11 +481,46 @@ Review what you learned and try planting a seed at home. Watch how it grows day 
       </div>
     </div>
 
+    <div class="pdf-opts">
+      <label>Page
+        <select id="pdfFormat" title="Paper size for the exported PDF">
+          <option value="a4">A4</option>
+          <option value="letter">Letter</option>
+        </select>
+      </label>
+      <label>Margins
+        <select id="pdfMargins" title="Page margins for the exported PDF">
+          <option value="narrow">Narrow</option>
+          <option value="normal" selected>Normal</option>
+          <option value="wide">Wide</option>
+        </select>
+      </label>
+      <label>Text size
+        <select id="pdfScale" title="Overall text size of the exported PDF">
+          <option value="0.9">Small</option>
+          <option value="1" selected>Normal</option>
+          <option value="1.15">Large</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="docs-card">
+      <label>Saved documents</label>
+      <select id="docList" title="Load a saved document">
+        <option value="">— no saved documents —</option>
+      </select>
+      <div class="doc-actions">
+        <button class="btn ghost" id="saveDocBtn" type="button">Save current</button>
+        <button class="btn ghost" id="deleteDocBtn" type="button">Delete</button>
+      </div>
+    </div>
+
     <div class="actions">
       <button class="btn primary" id="exportBtn">Export as PDF</button>
       <div class="btn-row">
         <button class="btn ghost" id="copyBtn" type="button">Copy HTML</button>
         <button class="btn ghost" id="clearBtn" type="button">Clear</button>
+        <button class="btn ghost" id="loadFileBtn" type="button">Load .txt</button>
       </div>
       <div class="status" id="status"></div>
     </div>
@@ -449,6 +532,7 @@ Review what you learned and try planting a seed at home. Watch how it grows day 
     </div>
   </div>
 </div>
+<input type="file" id="fileInput" accept=".txt,.md,.text,text/plain" style="display:none">
 
 <script>
 /* ------------------------------------------------------------------ */
@@ -470,6 +554,9 @@ let colors = { ...themes[0] };
 let activeTheme = 0;      // -1 means custom
 let smartMode = true;     // smart (auto-organized) text mode
 let titleTouched = false; // user manually set the document title
+let pdfFormat  = 'a4';    // paper size for export
+let pdfMargins = 'normal';// narrow | normal | wide
+let pdfScale   = 1;       // text size multiplier for export
 
 /* ------------------------------------------------------------------ */
 /*  Elements                                                           */
@@ -486,10 +573,17 @@ const $cAccentDark = document.getElementById('cAccentDark');
 const $cAccent2    = document.getElementById('cAccent2');
 const $cAccent2Dark= document.getElementById('cAccent2Dark');
 
+const $pdfFormat  = document.getElementById('pdfFormat');
+const $pdfMargins = document.getElementById('pdfMargins');
+const $pdfScale   = document.getElementById('pdfScale');
+const $docList    = document.getElementById('docList');
+const $fileInput  = document.getElementById('fileInput');
+
 /* ------------------------------------------------------------------ */
 /*  Autosave                                                           */
 /* ------------------------------------------------------------------ */
 const LS_KEY = 'course-formatter-v3';
+const DOCS_KEY = 'course-formatter-docs';
 function save(){
   try{
     localStorage.setItem(LS_KEY, JSON.stringify({
@@ -498,7 +592,10 @@ function save(){
       colors: colors,
       activeTheme: activeTheme,
       smartMode: smartMode,
-      titleTouched: titleTouched
+      titleTouched: titleTouched,
+      pdfFormat: pdfFormat,
+      pdfMargins: pdfMargins,
+      pdfScale: pdfScale
     }));
   }catch(e){}
 }
@@ -513,8 +610,109 @@ function loadSaved(){
     if(typeof data.activeTheme === 'number') activeTheme = data.activeTheme;
     if(typeof data.smartMode === 'boolean') smartMode = data.smartMode;
     if(data.title) titleTouched = (data.title !== 'My course');
+    if(data.pdfFormat) pdfFormat = data.pdfFormat;
+    if(data.pdfMargins) pdfMargins = data.pdfMargins;
+    if(data.pdfScale) pdfScale = data.pdfScale;
   }catch(e){}
 }
+
+/* ------------------------------------------------------------------ */
+/*  Saved documents                                                    */
+/* ------------------------------------------------------------------ */
+function loadDocList(){
+  try{ return JSON.parse(localStorage.getItem(DOCS_KEY)) || []; }catch(e){ return []; }
+}
+function saveDocList(list){
+  try{ localStorage.setItem(DOCS_KEY, JSON.stringify(list.slice(-20))); }catch(e){}
+}
+function buildDocList(){
+  const list = loadDocList();
+  $docList.innerHTML = '';
+  if(!list.length){
+    const d = document.createElement('option');
+    d.value = ''; d.textContent = '— no saved documents —';
+    $docList.appendChild(d);
+    return;
+  }
+  list.forEach(item=>{
+    const o = document.createElement('option');
+    o.value = item.name;
+    o.textContent = item.name;
+    $docList.appendChild(o);
+  });
+}
+function saveCurrentDoc(){
+  const name = prompt('Document name?', $title.value || 'Untitled');
+  if(!name) return;
+  const list = loadDocList();
+  const idx = list.findIndex(d => d.name === name);
+  const entry = {
+    name: name,
+    title: $title.value,
+    text: $input.value,
+    colors: colors,
+    activeTheme: activeTheme,
+    smartMode: smartMode,
+    titleTouched: titleTouched,
+    pdfFormat: pdfFormat,
+    pdfMargins: pdfMargins,
+    pdfScale: pdfScale,
+    ts: Date.now()
+  };
+  if(idx >= 0) list[idx] = entry; else list.push(entry);
+  saveDocList(list);
+  buildDocList();
+  $docList.value = name;
+  setStatus('Saved "' + name + '"', false, true);
+}
+function loadDoc(name){
+  const doc = loadDocList().find(d => d.name === name);
+  if(!doc) return;
+  $input.value = doc.text || '';
+  $title.value = doc.title || '';
+  colors = doc.colors || { ...themes[0] };
+  activeTheme = typeof doc.activeTheme === 'number' ? doc.activeTheme : 0;
+  smartMode = doc.smartMode !== false;
+  titleTouched = !!doc.titleTouched;
+  if(doc.pdfFormat) pdfFormat = doc.pdfFormat;
+  if(doc.pdfMargins) pdfMargins = doc.pdfMargins;
+  if(doc.pdfScale) pdfScale = doc.pdfScale;
+  syncColorInputs();
+  buildThemeButtons();
+  syncPdfControls();
+  render();
+  save();
+  setStatus('Loaded "' + name + '"', false, true);
+}
+function deleteCurrentDoc(){
+  const name = $docList.value;
+  if(!name) return;
+  if(!confirm('Delete "' + name + '"?')) return;
+  saveDocList(loadDocList().filter(d => d.name !== name));
+  buildDocList();
+  $docList.value = '';
+  setStatus('Deleted.');
+}
+
+/* ------------------------------------------------------------------ */
+/*  PDF export option controls                                         */
+/* ------------------------------------------------------------------ */
+function syncPdfControls(){
+  $pdfFormat.value = pdfFormat;
+  $pdfMargins.value = pdfMargins;
+  $pdfScale.value = String(pdfScale);
+}
+[$pdfFormat, $pdfMargins, $pdfScale].forEach(el=>{
+  el.addEventListener('change', ()=>{
+    pdfFormat = $pdfFormat.value;
+    pdfMargins = $pdfMargins.value;
+    pdfScale = parseFloat($pdfScale.value) || 1;
+    drawPageGuides(); save();
+  });
+});
+$docList.addEventListener('change', ()=>{ if($docList.value) loadDoc($docList.value); });
+document.getElementById('saveDocBtn').addEventListener('click', saveCurrentDoc);
+document.getElementById('deleteDocBtn').addEventListener('click', deleteCurrentDoc);
 
 /* ------------------------------------------------------------------ */
 /*  Color pickers                                                      */
@@ -909,6 +1107,53 @@ function drawPageGuides(){
 //    without cutting any single item in half.
 //  - The background of every PDF page is pure white (#FFFFFF).
 //
+
+// Real Inter / Fraunces fonts, fetched once and embedded into the PDF as
+// TTF. If any download fails (offline/CDN down) we fall back to the
+// built-in Helvetica/Times pair so the export never fails.
+const fontCache = { inter: {}, fraunces: {} };
+
+async function fetchFontBase64(url){
+  try{
+    const res = await fetch(url);
+    if(!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = '';
+    for(let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    if(typeof window !== 'undefined' && window.btoa) return window.btoa(binary);
+    return Buffer.from(binary, 'binary').toString('base64');
+  }catch(e){ return null; }
+}
+
+async function loadFonts(pdf){
+  const J = 'https://cdn.jsdelivr.net/npm/@expo-google-fonts/';
+  const FONTS = [
+    ['inter',    'normal',     J + 'inter@0.4.2/400Regular/Inter_400Regular.ttf'],
+    ['inter',    'bold',       J + 'inter@0.4.2/700Bold/Inter_700Bold.ttf'],
+    ['inter',    'italic',     J + 'inter@0.4.2/400Regular_Italic/Inter_400Regular_Italic.ttf'],
+    ['inter',    'bolditalic', J + 'inter@0.4.2/700Bold_Italic/Inter_700Bold_Italic.ttf'],
+    ['fraunces', 'normal',     J + 'fraunces@0.4.1/400Regular/Fraunces_400Regular.ttf'],
+    ['fraunces', 'bold',       J + 'fraunces@0.4.1/700Bold/Fraunces_700Bold.ttf']
+  ];
+  const ok = { inter: false, fraunces: false };
+  for(const [family, style, url] of FONTS){
+    let b64 = fontCache[family][style];
+    if(!b64){
+      b64 = await fetchFontBase64(url);
+      if(!b64) continue;
+      fontCache[family][style] = b64;
+    }
+    try{
+      const fileName = family + '-' + style + '.ttf';
+      pdf.addFileToVFS(fileName, b64);
+      pdf.addFont(fileName, family, style);
+      ok[family] = true;
+    }catch(e){}
+  }
+  return ok;
+}
+
 async function exportPdf(){
   const { title: docTitle, blocks } = buildDocument();
   const rawTitle = (docTitle || 'document');
@@ -927,11 +1172,17 @@ async function exportPdf(){
     }
 
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit:'pt', format:'a4', orientation:'portrait' });
+    const [PW, PH] = pdfFormat === 'letter' ? [612, 792] : [595.28, 841.89];
+    const MARGIN_MAP = { narrow: 40, normal: 56, wide: 70 };
+    const M = MARGIN_MAP[pdfMargins] || 56;
+
+    const pdf = new jsPDF({ unit:'pt', format:[PW, PH], orientation:'portrait' });
+
+    setStatus('Loading fonts…');
+    const loaded = await loadFonts(pdf);
 
     const A4_W = pdf.internal.pageSize.getWidth();
     const A4_H = pdf.internal.pageSize.getHeight();
-    const M = PDF_MARGIN;
     const contentW = A4_W - M * 2;
     const contentBottom = A4_H - M;
 
@@ -941,12 +1192,10 @@ async function exportPdf(){
       pdf.rect(0, 0, A4_W, A4_H, 'F');
     }
 
-    // PDF font mapping (jsPDF built-in fonts only — colors are exact).
-    // Fraunces / Inter aren't available as built-in PDF fonts, so we use
-    // Times (serif, for headings) and Helvetica (sans, for body) which
-    // are extremely close visually and always render correctly.
-    const FONT_SERIF = 'times';
-    const FONT_SANS  = 'helvetica';
+    // Real Inter / Fraunces fonts are embedded when available, otherwise we
+    // fall back to Times (serif) and Helvetica (sans) so exporting never fails.
+    const FONT_SERIF = loaded.fraunces ? 'fraunces' : 'times';
+    const FONT_SANS  = loaded.inter    ? 'inter'    : 'helvetica';
 
     const INK        = [32, 38, 46];       // #20262E
     const INK_SOFT   = [91, 100, 112];     // #5B6470
@@ -975,6 +1224,8 @@ async function exportPdf(){
       h3:      10,
       body:    10.5,
     };
+    const fs = pdfScale || 1;
+    Object.keys(FS).forEach(k => FS[k] = FS[k] * fs);
     const LH = {
       title:   FS.title  * 1.18,
       h1:      FS.h1     * 1.25,
@@ -1347,7 +1598,7 @@ function updateHint(){
   const el = document.getElementById('hint');
   if(!el) return;
   el.innerHTML = smartMode
-    ? 'Smart mode is on — short lines become headings, dash/• or numbered lines become lists, long lines become paragraphs. Markers like <code>##</code>, <code>-</code>, <code>**bold**</code> still work for fine control.'
+    ? 'Smart mode is on — short lines become headings, dash/• or numbered lines become lists, long lines become paragraphs. Markers like <code>##</code>, <code>-</code>, <code>**bold**</code> still work. You can also drop a <code>.txt</code> file here.'
     : '<code># </code> main title · <code>## </code> section · <code>### </code> small heading · <code>- </code> bullet · <code>**bold**</code> · <code>*italic*</code> · blank line = new paragraph.';
 }
 
@@ -1386,6 +1637,35 @@ function scheduleRender(){
 $input.addEventListener('input', scheduleRender);
 $title.addEventListener('input', ()=>{ titleTouched = true; scheduleRender(); });
 
+/* ------------------------------------------------------------------ */
+/*  Text import: drag-and-drop + file picker                           */
+/* ------------------------------------------------------------------ */
+function applyImportedText(text, name){
+  $input.value = text;
+  titleTouched = false; // re-detect the title from the first line
+  scheduleRender();
+  setStatus('Loaded "' + name + '"', false, true);
+}
+$input.addEventListener('dragover', e=>{
+  e.preventDefault();
+  $input.classList.add('drag-hover');
+});
+$input.addEventListener('dragleave', ()=>{ $input.classList.remove('drag-hover'); });
+$input.addEventListener('drop', async e=>{
+  e.preventDefault();
+  $input.classList.remove('drag-hover');
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(!file) return;
+  applyImportedText(await file.text(), file.name);
+});
+document.getElementById('loadFileBtn').addEventListener('click', ()=> $fileInput.click());
+$fileInput.addEventListener('change', async ()=>{
+  const file = $fileInput.files && $fileInput.files[0];
+  if(!file) return;
+  applyImportedText(await file.text(), file.name);
+  $fileInput.value = '';
+});
+
 document.addEventListener('keydown', (e)=>{
   if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's'){
     e.preventDefault();
@@ -1423,7 +1703,9 @@ function preloadLogo(){
 loadSaved();
 $smartToggle.checked = smartMode;
 syncColorInputs();
+syncPdfControls();
 buildThemeButtons();
+buildDocList();
 render();
 preloadLogo();
 </script>
