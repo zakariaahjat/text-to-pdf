@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="LOGOPNG.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Amiri:wght@400;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
@@ -57,6 +57,33 @@
     letter-spacing:.01em;
   }
   .topbar-meta span{font-size:12px; color:var(--ink-soft);}
+  .lang-sel{
+    margin-left:auto;
+    padding:7px 10px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  html[dir=rtl] .lang-sel{margin-left:0; margin-right:auto;}
+  html[dir=rtl] body,
+  html[dir=rtl] .side input,
+  html[dir=rtl] .side textarea,
+  html[dir=rtl] .side select{
+    font-family:'Inter','Cairo',sans-serif;
+  }
+  html[dir=rtl] .topbar-meta strong{
+    font-family:'Fraunces','Amiri',serif;
+  }
+  html[dir=rtl] .side input,
+  html[dir=rtl] .side textarea,
+  html[dir=rtl] .side select{text-align:right; direction:rtl;}
+  html[dir=rtl] .smart-card{flex-direction:row-reverse;}
+  html[dir=rtl] .theme-btn span:first-child{margin-right:0; margin-left:0;}
+  html[dir=rtl] .btn-row{direction:ltr;}
   .side{
     background:var(--panel);
     border-right:1px solid var(--line);
@@ -401,6 +428,11 @@
     .stage{padding:24px 12px; max-height:none;}
     #page{padding:36px 28px;}
   }
+.drag-hint{font-size:11.5px; color:var(--ink-soft);}
+
+  /* Arabic preview fonts: keep the Latin pairing, fall back to Arabic faces */
+  #page .doc-title, #page h1.section{font-family:'Fraunces','Amiri',serif;}
+  #page h2.section, #page h3.section, #page p, #page li{font-family:'Inter','Cairo',sans-serif;}
 </style>
 </head>
 <body>
@@ -408,9 +440,14 @@
   <header class="topbar">
     <img class="topbar-logo" src="LOGOPNG.png" alt="Course Formatter">
     <div class="topbar-meta">
-      <strong>Course Formatter</strong>
-      <span>Paste · Style · Export a clean PDF</span>
+      <strong data-i18n="appName">Course Formatter</strong>
+      <span data-i18n="tagline">Paste · Style · Export a clean PDF</span>
     </div>
+    <select id="langSel" class="lang-sel" title="Language / اللغة / Langue">
+      <option value="en">English</option>
+      <option value="fr">Français</option>
+      <option value="ar">العربية</option>
+    </select>
   </header>
 
   <div class="side">
@@ -420,18 +457,18 @@
         <span class="track"></span>
       </label>
       <div class="smart-card-text">
-        <strong>Smart mode</strong>
-        <span>Auto-organizes plain text</span>
+        <strong data-i18n="smartLabel">Smart mode</strong>
+        <span data-i18n="smartSub">Auto-organizes plain text</span>
       </div>
     </div>
 
     <div>
-      <label for="doctitle">Document title</label>
-      <input id="doctitle" class="doc-title-input" type="text" value="My course" placeholder="Document title">
+      <label for="doctitle" data-i18n="doctitle">Document title</label>
+      <input id="doctitle" class="doc-title-input" type="text" value="My course" data-i18n-ph="doctitle" placeholder="Document title">
     </div>
 
     <div>
-      <label for="input">Your text</label>
+      <label for="input" data-i18n="inputLabel">Your text</label>
       <textarea id="input" spellcheck="false">My Course: How Plants Grow
 Introduction
 This course explains how plants grow from seed to flower. Plants use sunlight, water and soil to make their food through a process called **photosynthesis**.
@@ -457,70 +494,70 @@ Review what you learned and try planting a seed at home. Watch how it grows day 
     </div>
 
     <div>
-      <label>Preset themes</label>
+      <label data-i18n="presetThemes">Preset themes</label>
       <div class="themes" id="themes"></div>
 
-      <label>Custom colors</label>
+      <label data-i18n="customColors">Custom colors</label>
       <div class="pickers">
         <label class="picker" title="Primary accent (main headings, top border)">
           <input type="color" id="cAccent">
-          <span>Accent</span>
+          <span data-i18n="pickAccent">Accent</span>
         </label>
         <label class="picker" title="Primary accent dark (used for chapter headings)">
           <input type="color" id="cAccentDark">
-          <span>Accent 2</span>
+          <span data-i18n="pickAccent2">Accent 2</span>
         </label>
         <label class="picker" title="Secondary accent (left border of section headings)">
           <input type="color" id="cAccent2">
-          <span>Second</span>
+          <span data-i18n="pickSecond">Second</span>
         </label>
         <label class="picker" title="Secondary accent dark (used for section headings)">
           <input type="color" id="cAccent2Dark">
-          <span>Second 2</span>
+          <span data-i18n="pickSecond2">Second 2</span>
         </label>
       </div>
     </div>
 
     <div class="pdf-opts">
-      <label>Page
+      <label data-i18n="pageOpt">Page
         <select id="pdfFormat" title="Paper size for the exported PDF">
           <option value="a4">A4</option>
           <option value="letter">Letter</option>
         </select>
       </label>
-      <label>Margins
+      <label data-i18n="marginsOpt">Margins
         <select id="pdfMargins" title="Page margins for the exported PDF">
-          <option value="narrow">Narrow</option>
-          <option value="normal" selected>Normal</option>
-          <option value="wide">Wide</option>
+          <option value="narrow" data-i18n-opt="marginsNarrow">Narrow</option>
+          <option value="normal" selected data-i18n-opt="marginsNormal">Normal</option>
+          <option value="wide" data-i18n-opt="marginsWide">Wide</option>
         </select>
       </label>
-      <label>Text size
+      <label data-i18n="textSizeOpt">Text size
         <select id="pdfScale" title="Overall text size of the exported PDF">
-          <option value="0.9">Small</option>
-          <option value="1" selected>Normal</option>
-          <option value="1.15">Large</option>
+          <option value="0.9" data-i18n-opt="sizeSmall">Small</option>
+          <option value="1" selected data-i18n-opt="sizeNormal">Normal</option>
+          <option value="1.15" data-i18n-opt="sizeLarge">Large</option>
         </select>
       </label>
     </div>
 
     <div class="docs-card">
-      <label>Saved documents</label>
+      <label for="docList" data-i18n="savedDocs">Saved documents</label>
       <select id="docList" title="Load a saved document">
         <option value="">— no saved documents —</option>
       </select>
       <div class="doc-actions">
-        <button class="btn ghost" id="saveDocBtn" type="button">Save current</button>
-        <button class="btn ghost" id="deleteDocBtn" type="button">Delete</button>
+        <button class="btn ghost" id="saveDocBtn" type="button" data-i18n="saveCurrent">Save current</button>
+        <button class="btn ghost" id="deleteDocBtn" type="button" data-i18n="delete">Delete</button>
       </div>
     </div>
 
     <div class="actions">
-      <button class="btn primary" id="exportBtn">Export as PDF</button>
+      <button class="btn primary" id="exportBtn" data-i18n="exportBtn">Export as PDF</button>
       <div class="btn-row">
-        <button class="btn ghost" id="copyBtn" type="button">Copy HTML</button>
-        <button class="btn ghost" id="clearBtn" type="button">Clear</button>
-        <button class="btn ghost" id="loadFileBtn" type="button">Load .txt</button>
+        <button class="btn ghost" id="copyBtn" type="button" data-i18n="copyHtml">Copy HTML</button>
+        <button class="btn ghost" id="clearBtn" type="button" data-i18n="clearBtn">Clear</button>
+        <button class="btn ghost" id="loadFileBtn" type="button" data-i18n="loadTxt">Load .txt</button>
       </div>
       <div class="status" id="status"></div>
     </div>
@@ -557,6 +594,110 @@ let titleTouched = false; // user manually set the document title
 let pdfFormat  = 'a4';    // paper size for export
 let pdfMargins = 'normal';// narrow | normal | wide
 let pdfScale   = 1;       // text size multiplier for export
+let lang = 'en';          // interface language: en | fr | ar
+
+/* ------------------------------------------------------------------ */
+/*  Language / translations                                            */
+/* ------------------------------------------------------------------ */
+const L10N = {
+  en:{
+    appName:'Course Formatter', tagline:'Paste · Style · Export a clean PDF',
+    smartLabel:'Smart mode', smartSub:'Auto-organizes plain text',
+    doctitle:'Document title', inputLabel:'Your text',
+    hintSmart:'Smart mode is on — short lines become headings, dash/• or numbered lines become lists, long lines become paragraphs. Markers like ##, -, **bold** still work. You can also drop a .txt file here.',
+    hintMark:'# main title · ## section · ### small heading · - bullet · **bold** · *italic* · blank line = new paragraph.',
+    presetThemes:'Preset themes', customColors:'Custom colors',
+    pickAccent:'Accent', pickAccent2:'Accent dark', pickSecond:'Second', pickSecond2:'Second dark',
+    pageOpt:'Page', marginsOpt:'Margins', textSizeOpt:'Text size',
+    marginsNarrow:'Narrow', marginsNormal:'Normal', marginsWide:'Wide',
+    sizeSmall:'Small', sizeNormal:'Normal', sizeLarge:'Large',
+    savedDocs:'Saved documents', noDocs:'— no saved documents —',
+    saveCurrent:'Save current', delete:'Delete',
+    exportBtn:'Export as PDF', copyHtml:'Copy HTML', clearBtn:'Clear', loadTxt:'Load .txt',
+    statusPreparing:'Preparing PDF…', statusFonts:'Loading fonts…',
+    statusSaved:'Saved \u201C$1\u201D', statusLoaded:'Loaded \u201C$1\u201D',
+    statusDeleted:'Deleted.', statusCleared:'Cleared.',
+    statusCopyOk:'Rendered HTML copied to clipboard.', statusCopyFail:'Copy failed.',
+    statusExportFail:'Export failed. See console.',
+    promptDocName:'Document name?',
+    promptConfirmClear:'Clear the text and title?',
+    promptConfirmDelete:'Delete \u201C$1\u201D?',
+    emptyHint:'Start typing on the left to see your document take shape here.'
+  },
+  fr:{
+    appName:'Course Formatter', tagline:'Collez · Stylisez · Exportez un beau PDF',
+    smartLabel:'Mode intelligent', smartSub:'Organise automatiquement le texte brut',
+    doctitle:'Titre du document', inputLabel:'Votre texte',
+    hintSmart:'Le mode intelligent est actif — les lignes courtes deviennent des titres, les puces ou lignes numérotées des listes, les longues lignes des paragraphes. Les marqueurs comme ##, -, **gras** fonctionnent toujours. Vous pouvez aussi déposer un fichier .txt ici.',
+    hintMark:'# titre · ## section · ### sous-titre · - puce · **gras** · *italique* · ligne vide = nouveau paragraphe.',
+    presetThemes:'Thèmes prédéfinis', customColors:'Couleurs personnalisées',
+    pickAccent:'Accent', pickAccent2:'Accent sombre', pickSecond:'Second', pickSecond2:'Second sombre',
+    pageOpt:'Page', marginsOpt:'Marges', textSizeOpt:'Taille du texte',
+    marginsNarrow:'Étroites', marginsNormal:'Normales', marginsWide:'Larges',
+    sizeSmall:'Petit', sizeNormal:'Normal', sizeLarge:'Grand',
+    savedDocs:'Documents enregistrés', noDocs:'— aucun document —',
+    saveCurrent:'Enregistrer', delete:'Supprimer',
+    exportBtn:'Exporter en PDF', copyHtml:'Copier HTML', clearBtn:'Effacer', loadTxt:'Ouvrir .txt',
+    statusPreparing:'Préparation du PDF…', statusFonts:'Chargement des polices…',
+    statusSaved:'Enregistré \u201C$1\u201D', statusLoaded:'Chargé \u201C$1\u201D',
+    statusDeleted:'Supprimé.', statusCleared:'Effacé.',
+    statusCopyOk:'HTML copié dans le presse-papiers.', statusCopyFail:'Échec de la copie.',
+    statusExportFail:'Échec de l\u2019export. Voir la console.',
+    promptDocName:'Nom du document ?',
+    promptConfirmClear:'Effacer le texte et le titre ?',
+    promptConfirmDelete:'Supprimer \u201C$1\u201D ?',
+    emptyHint:'Commencez à écrire à gauche, votre document apparaît ici.'
+  },
+  ar:{
+    appName:'منسّق المستندات', tagline:'الصق · نسّق · صدّر PDF أنيق',
+    smartLabel:'الوضع الذكي', smartSub:'ينظّم النص العادي تلقائيًا',
+    doctitle:'عنوان المستند', inputLabel:'نصّك',
+    hintSmart:'الوضع الذكي مفعّل — الأسطر القصيرة تصبح عناوين، أسطر الشرطة أو الأرقام قوائم، والأسطر الطويلة فقرات. الرموز مثل ## و- و**غامق** تظل تعمل. يمكنك أيضًا إفلات ملف .txt هنا.',
+    hintMark:'# العنوان الرئيسي · ## قسم · ### عنوان صغير · - نقطة · **غامق** · *مائل* · سطر فارغ = فقرة جديدة.',
+    presetThemes:'السمات الجاهزة', customColors:'ألوان مخصصة',
+    pickAccent:'رئيسي', pickAccent2:'رئيسي داكن', pickSecond:'ثانوي', pickSecond2:'ثانوي داكن',
+    pageOpt:'الورقة', marginsOpt:'الهوامش', textSizeOpt:'حجم النص',
+    marginsNarrow:'ضيقة', marginsNormal:'عادية', marginsWide:'واسعة',
+    sizeSmall:'صغير', sizeNormal:'عادي', sizeLarge:'كبير',
+    savedDocs:'المستندات المحفوظة', noDocs:'— لا توجد مستندات محفوظة —',
+    saveCurrent:'حفظ الحالي', delete:'حذف',
+    exportBtn:'تصدير PDF', copyHtml:'نسخ HTML', clearBtn:'مسح', loadTxt:'تحميل .txt',
+    statusPreparing:'جارٍ تجهيز PDF…', statusFonts:'جارٍ تحميل الخطوط…',
+    statusSaved:'تم حفظ «$1»', statusLoaded:'تم تحميل «$1»',
+    statusDeleted:'تم الحذف.', statusCleared:'تم المسح.',
+    statusCopyOk:'تم نسخ HTML.', statusCopyFail:'فشلت النسخ.',
+    statusExportFail:'فشل التصدير. راجع وحدة التحكم.',
+    promptDocName:'اسم المستند؟',
+    promptConfirmClear:'مسح النص والعنوان؟',
+    promptConfirmDelete:'حذف «$1»؟',
+    emptyHint:'ابدأ الكتابة على اليسار لترى مستندك هنا.'
+  }
+};
+
+function t(key, repl){
+  const d = L10N[lang] || L10N.en;
+  let v = (d[key] !== undefined) ? d[key] : L10N.en[key];
+  if(v === undefined) v = key;
+  if(repl !== undefined) v = String(v).replace('$1', repl);
+  return v;
+}
+function applyLanguage(){
+  const L = L10N[lang] || L10N.en;
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(L[key] !== undefined) el.textContent = L[key];
+  });
+  document.querySelectorAll('[data-i18n-opt]').forEach(el=>{
+    const key = el.getAttribute('data-i18n-opt');
+    if(L[key] !== undefined) el.textContent = L[key];
+  });
+  document.title = (lang === 'ar' ? 'منسّق المستندات' : (lang === 'fr' ? 'Course Formatter — Texte vers PDF' : 'Course Formatter — Text to PDF'));
+  updateHint();
+  buildDocList();
+  save();
+}
 
 /* ------------------------------------------------------------------ */
 /*  Elements                                                           */
@@ -578,6 +719,7 @@ const $pdfMargins = document.getElementById('pdfMargins');
 const $pdfScale   = document.getElementById('pdfScale');
 const $docList    = document.getElementById('docList');
 const $fileInput  = document.getElementById('fileInput');
+const $langSel    = document.getElementById('langSel');
 
 /* ------------------------------------------------------------------ */
 /*  Autosave                                                           */
@@ -595,7 +737,8 @@ function save(){
       titleTouched: titleTouched,
       pdfFormat: pdfFormat,
       pdfMargins: pdfMargins,
-      pdfScale: pdfScale
+      pdfScale: pdfScale,
+      lang: lang
     }));
   }catch(e){}
 }
@@ -613,6 +756,7 @@ function loadSaved(){
     if(data.pdfFormat) pdfFormat = data.pdfFormat;
     if(data.pdfMargins) pdfMargins = data.pdfMargins;
     if(data.pdfScale) pdfScale = data.pdfScale;
+    if(data.lang) lang = data.lang;
   }catch(e){}
 }
 
@@ -630,7 +774,7 @@ function buildDocList(){
   $docList.innerHTML = '';
   if(!list.length){
     const d = document.createElement('option');
-    d.value = ''; d.textContent = '— no saved documents —';
+    d.value = ''; d.textContent = t('noDocs');
     $docList.appendChild(d);
     return;
   }
@@ -642,7 +786,7 @@ function buildDocList(){
   });
 }
 function saveCurrentDoc(){
-  const name = prompt('Document name?', $title.value || 'Untitled');
+  const name = prompt(t('promptDocName'), $title.value || 'Untitled');
   if(!name) return;
   const list = loadDocList();
   const idx = list.findIndex(d => d.name === name);
@@ -663,7 +807,7 @@ function saveCurrentDoc(){
   saveDocList(list);
   buildDocList();
   $docList.value = name;
-  setStatus('Saved "' + name + '"', false, true);
+  setStatus(t('statusSaved', name), false, true);
 }
 function loadDoc(name){
   const doc = loadDocList().find(d => d.name === name);
@@ -682,16 +826,16 @@ function loadDoc(name){
   syncPdfControls();
   render();
   save();
-  setStatus('Loaded "' + name + '"', false, true);
+  setStatus(t('statusLoaded', name), false, true);
 }
 function deleteCurrentDoc(){
   const name = $docList.value;
   if(!name) return;
-  if(!confirm('Delete "' + name + '"?')) return;
+  if(!confirm(t('promptConfirmDelete', name))) return;
   saveDocList(loadDocList().filter(d => d.name !== name));
   buildDocList();
   $docList.value = '';
-  setStatus('Deleted.');
+  setStatus(t('statusDeleted'));
 }
 
 /* ------------------------------------------------------------------ */
@@ -1053,7 +1197,9 @@ function render(){
   $page.innerHTML =
     `<img class="doc-logo" src="LOGOPNG.png" alt="">` +
     `<h1 class="doc-title">${escapeHtml(title)}</h1>` +
-    (body.trim() ? body : '<p class="empty">Start typing on the left to see your document take shape here.</p>');
+    (body.trim() ? body : '<p class="empty"></p>');
+    const emptyEl = $page.querySelector('.empty');
+    if(emptyEl) emptyEl.textContent = t('emptyHint');
 
   drawPageGuides();
   updateHint();
@@ -1161,10 +1307,10 @@ async function exportPdf(){
     .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,80);
   const filename = (slug || 'document') + '.pdf';
 
-  setStatus('Preparing PDF…');
+  setStatus(t('statusPreparing'));
   $export.disabled = true;
   const prevLabel = $export.textContent;
-  $export.textContent = 'Preparing…';
+  $export.textContent = t('statusPreparing');
 
   try{
     if(document.fonts && document.fonts.ready){
@@ -1178,7 +1324,7 @@ async function exportPdf(){
 
     const pdf = new jsPDF({ unit:'pt', format:[PW, PH], orientation:'portrait' });
 
-    setStatus('Loading fonts…');
+    setStatus(t('statusFonts'));
     const loaded = await loadFonts(pdf);
 
     const A4_W = pdf.internal.pageSize.getWidth();
@@ -1246,6 +1392,54 @@ async function exportPdf(){
     };
 
     let y = M;
+    const contentRight = A4_W - M;
+
+    // ---- Arabic rendering ------------------------------------------
+    // jsPDF cannot shape / join Arabic letters. When a run contains Arabic
+    // text we rasterize it with the browser's text engine (canvas + the
+    // Cairo/Amiri web fonts) and embed the result as an image, so Arabic
+    // reads correctly, joined, and right-to-left in the PDF.
+    const AR_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0660-\u0669]/;
+    const hasArabic = s => AR_RE.test(String(s));
+    let arCanvas = null, arCtx = null;
+    function arabicGetCtx(){
+      if(!arCanvas){
+        arCanvas = document.createElement('canvas');
+        arCtx = arCanvas.getContext('2d');
+      }
+      return arCtx;
+    }
+    function arabicFontCss(weight, italic, sizePt, serif){
+      const px = sizePt * (96 / 72);
+      const face = serif ? '"Amiri","Cairo",serif' : '"Cairo","Amiri",sans-serif';
+      return (italic ? 'italic ' : '') + weight + ' ' + px + 'px ' + face;
+    }
+    function arabicWidthPt(text, bold, italic, sizePt){
+      try{
+        const ctx = arabicGetCtx();
+        ctx.font = arabicFontCss(bold ? 700 : 400, italic, sizePt, false);
+        return ctx.measureText(String(text)).width * 0.75;
+      }catch(e){ return null; }
+    }
+    function arabicSprite(text, bold, italic, sizePt, rgb, serif){
+      try{
+        const ctx = arabicGetCtx();
+        const px = sizePt * (96 / 72);
+        ctx.font = arabicFontCss(bold ? 700 : 400, italic, sizePt, serif);
+        const m = ctx.measureText(String(text));
+        const wPx = Math.ceil(m.width) + 4;
+        const aPx = Math.ceil(m.actualBoundingBoxAscent || px * 0.9) + 2;
+        const dPx = Math.ceil(m.actualBoundingBoxDescent || px * 0.2) + 2;
+        arCanvas.width = wPx;
+        arCanvas.height = aPx + dPx;
+        ctx.clearRect(0, 0, wPx, aPx + dPx);
+        ctx.font = arabicFontCss(bold ? 700 : 400, italic, sizePt, serif);
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+        ctx.fillText(String(text), 2, aPx);
+        return { img: arCanvas.toDataURL('image/png'), wPt: wPx * 0.75, aPt: aPx * 0.75, dPt: dPx * 0.75 };
+      }catch(e){ return null; }
+    }
 
     // Brand logo at the top of the document.
     if(logoAsset){
@@ -1346,6 +1540,8 @@ if(block.type === 'h3'){
 
     // Measure a single segment's width using the currently set font.
     function segWidth(seg, fontFamily, size){
+      const ar = hasArabic(seg.text) ? arabicWidthPt(seg.text, seg.bold, seg.italic, size) : null;
+      if(ar != null) return ar;
       pdf.setFont(fontFamily, seg.bold ? 'bold' : (seg.italic ? 'italic' : 'normal'));
       pdf.setFontSize(size);
       return pdf.getTextWidth(seg.text);
@@ -1408,21 +1604,26 @@ if(block.type === 'h3'){
     // Wrap plain text (no markup) into lines within maxW, char-breaking any
     // token wider than maxW so no line can overflow the page.
     function wrapPlainText(text, maxW, fontFamily, size){
-      pdf.setFont(fontFamily, 'bold');
-      pdf.setFontSize(size);
+      function measure(tok){
+        const ar = hasArabic(tok) ? arabicWidthPt(tok, true, false, size) : null;
+        if(ar != null) return ar;
+        pdf.setFont(fontFamily, 'bold');
+        pdf.setFontSize(size);
+        return pdf.getTextWidth(tok);
+      }
       const lines = [];
       let cur = '';
       let curW = 0;
       function next(line){ lines.push(line); cur = ''; curW = 0; }
       String(text).split(/(\s+)/).forEach(tok=>{
         if(tok === '') return;
-        const w = pdf.getTextWidth(tok);
+        const w = measure(tok);
         if(w > maxW){
           if(cur !== '') next(cur);
           let buf = '';
           for(const ch of tok){
             const test = buf + ch;
-            if(buf && curW + pdf.getTextWidth(test) > maxW){
+            if(buf && curW + measure(test) > maxW){
               next(buf);
               buf = '';
             }
@@ -1445,9 +1646,37 @@ if(block.type === 'h3'){
 
     // Render a segment line at baseline y, starting at x. Returns nothing.
     function drawSegments(segments, x, baselineY, fontFamily, size, color){
-      let cx = x;
+      const serif = fontFamily === FONT_SERIF;
+      function segW(s){
+        const ar = hasArabic(s.text) ? arabicWidthPt(s.text, s.bold, s.italic, size) : null;
+        if(ar != null) return ar;
+        pdf.setFont(fontFamily, s.bold ? 'bold' : (s.italic ? 'italic' : 'normal'));
+        pdf.setFontSize(size);
+        return pdf.getTextWidth(s.text);
+      }
       pdf.setTextColor(...color);
+      // A line that begins with Arabic renders right-to-left, right-aligned.
+      if(segments.length && hasArabic(segments[0].text)){
+        let rx = contentRight;
+        segments.forEach(s=>{
+          const w = segW(s);
+          rx -= w;
+          if(hasArabic(s.text)){
+            const spr = arabicSprite(s.text, s.bold, s.italic, size, color, serif);
+            if(spr){ pdf.addImage(spr.img, 'PNG', rx, baselineY - spr.aPt, spr.wPt, spr.aPt + spr.dPt); return; }
+          }
+          pdf.setFont(fontFamily, s.bold ? 'bold' : (s.italic ? 'italic' : 'normal'));
+          pdf.setFontSize(size);
+          pdf.text(s.text, rx, baselineY);
+        });
+        return;
+      }
+      let cx = x;
       segments.forEach(s=>{
+        if(hasArabic(s.text)){
+          const spr = arabicSprite(s.text, s.bold, s.italic, size, color, serif);
+          if(spr){ pdf.addImage(spr.img, 'PNG', cx, baselineY - spr.aPt, spr.wPt, spr.aPt + spr.dPt); cx += spr.wPt; return; }
+        }
         pdf.setFont(fontFamily, s.bold ? 'bold' : (s.italic ? 'italic' : 'normal'));
         pdf.setFontSize(size);
         pdf.text(s.text, cx, baselineY);
@@ -1574,10 +1803,10 @@ if(block.type === 'h3'){
     });
 
     pdf.save(filename);
-    setStatus(`Saved ${filename}`, false, true);
+    setStatus(t('statusSaved', filename), false, true);
   } catch(err){
     console.error(err);
-    setStatus('Export failed. See console.', true);
+    setStatus(t('statusExportFail'), true);
   } finally {
     $export.disabled = false;
     $export.textContent = prevLabel;
@@ -1597,9 +1826,7 @@ function setStatus(msg, isError, isOk){
 function updateHint(){
   const el = document.getElementById('hint');
   if(!el) return;
-  el.innerHTML = smartMode
-    ? 'Smart mode is on — short lines become headings, dash/• or numbered lines become lists, long lines become paragraphs. Markers like <code>##</code>, <code>-</code>, <code>**bold**</code> still work. You can also drop a <code>.txt</code> file here.'
-    : '<code># </code> main title · <code>## </code> section · <code>### </code> small heading · <code>- </code> bullet · <code>**bold**</code> · <code>*italic*</code> · blank line = new paragraph.';
+  el.innerHTML = smartMode ? t('hintSmart') : t('hintMark');
 }
 
 /* ------------------------------------------------------------------ */
@@ -1613,20 +1840,25 @@ $smartToggle.addEventListener('change', ()=>{
 
 $export.addEventListener('click', exportPdf);
 
+document.getElementById('langSel').addEventListener('change', e => {
+  lang = e.target.value;
+  applyLanguage();
+});
+
 document.getElementById('copyBtn').addEventListener('click', async ()=>{
   try{
     await navigator.clipboard.writeText($page.innerHTML);
-    setStatus('Rendered HTML copied to clipboard.', false, true);
-  }catch(e){ setStatus('Copy failed.', true); }
+    setStatus(t('statusCopyOk'), false, true);
+  }catch(e){ setStatus(t('statusCopyFail'), true); }
 });
 
 document.getElementById('clearBtn').addEventListener('click', ()=>{
-  if(!confirm('Clear the text and title?')) return;
+  if(!confirm(t('promptConfirmClear'))) return;
   $input.value = '';
   $title.value = 'My course';
   titleTouched = false;
   render(); save();
-  setStatus('Cleared.');
+  setStatus(t('statusCleared'));
 });
 
 let rafId = null;
@@ -1644,7 +1876,7 @@ function applyImportedText(text, name){
   $input.value = text;
   titleTouched = false; // re-detect the title from the first line
   scheduleRender();
-  setStatus('Loaded "' + name + '"', false, true);
+  setStatus(t('statusLoaded', name), false, true);
 }
 $input.addEventListener('dragover', e=>{
   e.preventDefault();
@@ -1701,6 +1933,8 @@ function preloadLogo(){
 /*  Boot                                                               */
 /* ------------------------------------------------------------------ */
 loadSaved();
+$langSel.value = lang;
+applyLanguage();
 $smartToggle.checked = smartMode;
 syncColorInputs();
 syncPdfControls();
