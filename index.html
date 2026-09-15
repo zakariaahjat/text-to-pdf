@@ -1079,6 +1079,23 @@ function headingInfo(l){
   return level ? { level: level } : null;
 }
 
+// Smart headings based on structure markers — works for any language,
+// including Arabic. A numbered ("1."), Arabic-lettered ("أ." "ب."), or
+// emoji-led ("🔴 ...") short line whose very next line is ordinary content
+// is a heading, not a list item. Consecutive marker lines stay lists.
+function headingCandidate(l, contentAfter){
+  if(!l || !contentAfter) return null;
+  const len = l.length;
+  if(/^\d[\d\u0660-\u0669]*[.)]\s/.test(l) && len <= 70) return 1;
+  if(/^[\u0621-\u064A][.)]\s/.test(l) && len <= 60) return 2;
+  if(
+    /^\p{Extended_Pictographic}/u.test(l) &&
+    len <= 60 &&
+    l.replace(/^\p{Extended_Pictographic}+/u, '').trim().length >= 2
+  ) return 3;
+  return null;
+}
+
 function smartParseToBlocks(raw){
   const lines = raw.replace(/\r\n/g, '\n').split('\n');
   const blocks = [];
@@ -1100,6 +1117,20 @@ function smartParseToBlocks(raw){
     if(t.startsWith('### ')){ blocks.push({type:'h3', html: inlineMarkdown(t.slice(4))}); i++; continue; }
     if(t.startsWith('## ')){ blocks.push({type:'h2', html: inlineMarkdown(t.slice(3))}); i++; continue; }
     if(t.startsWith('# ')){ blocks.push({type:'h1', html: inlineMarkdown(t.slice(2))}); i++; continue; }
+
+    // Smart structure headings: "1. Intro", "أ. الجبال 🏔️", "🔴 Note".
+    // These look like list markers, so only treat them as headings when the
+    // following line is ordinary content. Consecutive markers stay lists.
+    {
+      const nc = lines[i + 1] ? lines[i + 1].trim() : '';
+      const contentAfter = nc && !looksLikeListLine(nc) && nc !== '---' && nc !== '***' && nc !== '___' && !nc.startsWith('#');
+      const hsl = headingCandidate(t, contentAfter);
+      if(hsl){
+        blocks.push({ type: 'h' + hsl, html: inlineMarkdown(t) });
+        i++;
+        continue;
+      }
+    }
 
     // Lists (bullets, •, numbered).
     if(looksLikeListLine(t)){
@@ -1131,6 +1162,9 @@ function smartParseToBlocks(raw){
           if(!nt) break;
           if(looksLikeListLine(nt)){ gathered.push(nt); j++; continue; }
           if(isSentence(nt) || headingInfo(nt)) break;
+          const na = lines[j + 1] ? lines[j + 1].trim() : '';
+          const contentAfter = na && !looksLikeListLine(na) && na !== '---' && na !== '***' && na !== '___' && !na.startsWith('#');
+          if(headingCandidate(nt, contentAfter)) break;
           if(nt.length <= 42){ gathered.push('- ' + nt); j++; continue; }
           break;
         }
@@ -1157,6 +1191,9 @@ function smartParseToBlocks(raw){
       if(nt === '---' || nt === '***' || nt === '___') break;
       if(nt.startsWith('# ') || nt.startsWith('## ') || nt.startsWith('### ')) break;
       if(headingInfo(nt)) break;
+      const na = lines[j + 1] ? lines[j + 1].trim() : '';
+      const contentAfter = na && !looksLikeListLine(na) && na !== '---' && na !== '***' && na !== '___' && !na.startsWith('#');
+      if(headingCandidate(nt, contentAfter)) break;
       tokens.push(nt);
       j++;
     }
@@ -1174,7 +1211,8 @@ function detectTitle(raw){
   if(first.length > 70) return null;
   if(/[.!?]\s*$/.test(first)) return null;
   if(looksLikeListLine(first)) return null;
-  return first;
+  const stripped = first.replace(/^\p{Extended_Pictographic}+/u, '').trim();
+  return stripped || first;
 }
 
 function blocksToPreviewHtml(blocks){
