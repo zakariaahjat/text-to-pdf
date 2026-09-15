@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course Formatter — Text to PDF</title>
+<link rel="icon" type="image/png" href="LOGOPNG.png">
+<link rel="apple-touch-icon" href="LOGOPNG.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#FBF8F2;
+    --ink:#20262E;
+    --ink-soft:#5B6470;
+    --line:#E4DFD3;
+    --panel:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',system-ui,sans-serif;
+    background:#EFEAE0;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    display:grid;
+    grid-template-columns:420px 1fr;
+    grid-template-rows:auto 1fr;
+    min-height:100vh;
+  }
+  .topbar{
+    grid-column:1 / -1;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+    padding:10px 26px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);
+    z-index:5;
+  }
+  .topbar-logo{
+    height:44px;
+    width:auto;
+    display:block;
+    object-fit:contain;
+  }
+  .topbar-meta{display:flex; flex-direction:column; gap:1px;}
+  .topbar-meta strong{
+    font-family:'Fraunces',serif;
+    font-size:18px;
+    font-weight:600;
+    letter-spacing:.01em;
+  }
+  .topbar-meta span{font-size:12px; color:var(--ink-soft);}
+  .side{
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    padding:26px 22px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    max-height:calc(100vh - 66px);
+    overflow-y:auto;
+    position:sticky;
+    top:66px;
+  }
+  label{
+    font-size:11.5px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--ink-soft);
+    display:block;
+    margin-bottom:6px;
+  }
+  textarea{
+    width:100%;
+    min-height:260px;
+    resize:vertical;
+    font-family:'Inter',monospace;
+    font-size:13px;
+    line-height:1.55;
+    padding:12px 14px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fff;
+    color:var(--ink);
+    transition:border-color .15s;
+  }
+  textarea:focus{outline:none; border-color:#C8843C; box-shadow:0 0 0 3px rgba(200,132,60,.15);}
+  .hint{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    line-height:1.6;
+    background:#F4EFE4;
+    border-radius:10px;
+    padding:10px 12px;
+    margin-top:8px;
+  }
+  .hint code{
+    background:#fff;
+    padding:1px 5px;
+    border-radius:4px;
+    border:1px solid var(--line);
+    font-size:11px;
+  }
+
+  .smart-card{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#F7F2E9;
+  }
+  .switch{position:relative; display:inline-block; width:42px; height:24px; flex:none;}
+  .switch input{opacity:0; width:0; height:0; position:absolute;}
+  .switch .track{
+    position:absolute;
+    inset:0;
+    background:#D8D2C4;
+    border-radius:999px;
+    transition:background .15s;
+  }
+  .switch .track::before{
+    content:'';
+    position:absolute;
+    height:18px;
+    width:18px;
+    left:3px;
+    top:3px;
+    background:#fff;
+    border-radius:50%;
+    box-shadow:0 1px 2px rgba(0,0,0,.25);
+    transition:transform .15s;
+  }
+  .switch input:checked + .track{background:var(--ink);}
+  .switch input:checked + .track::before{transform:translateX(18px);}
+  .switch input:focus-visible + .track{outline:2px solid #C8843C; outline-offset:2px;}
+  .smart-card-text{display:flex; flex-direction:column; gap:1px; line-height:1.35;}
+  .smart-card-text strong{font-size:13.5px; font-weight:600;}
+  .smart-card-text span{font-size:11.5px; color:var(--ink-soft);}
+  .themes{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:7px;
+    margin-bottom:10px;
+  }
+  .theme-btn{
+    height:38px;
+    border-radius:9px;
+    border:2px solid transparent;
+    cursor:pointer;
+    display:flex;
+    padding:0;
+    background:transparent;
+    transition:transform .1s, border-color .15s;
+  }
+  .theme-btn:hover{transform:translateY(-1px);}
+  .theme-btn > span{flex:1; border-radius:5px; margin:3px;}
+  .theme-btn.active{border-color:var(--ink);}
+
+  /* Custom color pickers */
+  .pickers{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .picker{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 9px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    background:#fff;
+    cursor:pointer;
+    transition:border-color .15s;
+  }
+  .picker:hover{border-color:#C8843C;}
+  .picker input[type=color]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:26px;
+    height:26px;
+    border:none;
+    border-radius:6px;
+    padding:0;
+    background:transparent;
+    cursor:pointer;
+  }
+  .picker input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
+  .picker input[type=color]::-webkit-color-swatch{border:1px solid rgba(0,0,0,.1); border-radius:6px;}
+  .picker input[type=color]::-moz-color-swatch{border:1px solid rgba(0,0,0,.1); border-radius:6px;}
+  .picker span{
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+
+  .doc-title-input{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+    transition:border-color .15s;
+  }
+  .doc-title-input:focus{outline:none; border-color:#C8843C; box-shadow:0 0 0 3px rgba(200,132,60,.15);}
+
+  .actions{margin-top:auto; display:flex; flex-direction:column; gap:9px;}
+  .btn{
+    border:none;
+    padding:13px 16px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    font-family:inherit;
+    transition:background .15s, transform .08s;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn.primary{background:var(--ink); color:#fff;}
+  .btn.primary:hover{background:#0F141A;}
+  .btn.primary:disabled{opacity:.55; cursor:default; transform:none;}
+  .btn.ghost{background:#F4EFE4; color:var(--ink);}
+  .btn.ghost:hover{background:#EAE3D4;}
+  .btn-row{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .status{
+    font-size:12px;
+    color:var(--ink-soft);
+    text-align:center;
+    min-height:16px;
+    line-height:1.4;
+  }
+  .status.err{color:#B23B3B;}
+  .status.ok{color:#4A7A4A;}
+
+  .stage{
+    padding:40px 48px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    overflow-y:auto;
+    max-height:calc(100vh - 66px);
+  }
+  .stage-inner{position:relative;}
+  #page{
+    background:var(--paper);
+    width:100%;
+    max-width:760px;
+    min-height:1000px;
+    padding:64px 56px;
+    box-shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    position:relative;
+  }
+  #page .doc-logo{
+    display:block;
+    height:44px;
+    width:auto;
+    margin:0 0 16px;
+    object-fit:contain;
+  }
+  #page h1.doc-title{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:36px;
+    line-height:1.15;
+    margin:0 0 34px;
+    padding-bottom:18px;
+    border-bottom:3px solid var(--accent,#C8843C);
+    color:var(--ink);
+    overflow-wrap:anywhere;
+  }
+  #page h1.section{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:25px;
+    line-height:1.25;
+    color:var(--accent-dark,#8C5A24);
+    margin:36px 0 8px;
+  }
+  #page h2.section{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:16.5px;
+    line-height:1.35;
+    color:var(--accent2-dark,#4A5A48);
+    margin:24px 0 6px;
+    padding-left:12px;
+    border-left:3px solid var(--accent2,#7B9C77);
+  }
+  #page h3.section{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    line-height:1.35;
+    color:var(--ink-soft);
+    letter-spacing:.04em;
+    margin:18px 0 4px;
+  }
+  #page p{
+    font-size:14.5px;
+    line-height:1.75;
+    margin:0 0 12px;
+    color:#33393F;
+  }
+  #page ul{margin:0 0 14px; padding-left:24px;}
+  #page ol{margin:0 0 14px; padding-left:24px;}
+  #page li{font-size:14.5px; line-height:1.7; margin-bottom:5px; color:#33393F;}
+  #page strong{font-weight:700; color:var(--ink);}
+  #page em{font-style:italic;}
+  #page hr{border:none; border-top:1px solid var(--line); margin:22px 0;}
+  #page .empty{color:var(--ink-soft); font-size:14px; font-style:italic;}
+
+  .page-guide{
+    position:absolute;
+    left:-24px;
+    right:-24px;
+    border-top:1px dashed rgba(200,132,60,.22);
+    pointer-events:none;
+  }
+  .page-guide span{
+    position:absolute;
+    top:-9px;
+    right:0;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:rgba(200,132,60,.85);
+    background:var(--paper);
+    padding:0 6px;
+  }
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr;}
+    .side{position:static; max-height:none; border-right:none; border-bottom:1px solid var(--line);}
+    .stage{padding:24px 12px; max-height:none;}
+    #page{padding:36px 28px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <img class="topbar-logo" src="LOGOPNG.png" alt="Course Formatter">
+    <div class="topbar-meta">
+      <strong>Course Formatter</strong>
+      <span>Paste · Style · Export a clean PDF</span>
+    </div>
+  </header>
+
+  <div class="side">
+    <div class="smart-card">
+      <label class="switch" title="Toggle smart text organization">
+        <input type="checkbox" id="smartToggle" checked>
+        <span class="track"></span>
+      </label>
+      <div class="smart-card-text">
+        <strong>Smart mode</strong>
+        <span>Auto-organizes plain text</span>
+      </div>
+    </div>
+
+    <div>
+      <label for="doctitle">Document title</label>
+      <input id="doctitle" class="doc-title-input" type="text" value="My course" placeholder="Document title">
+    </div>
+
+    <div>
+      <label for="input">Your text</label>
+      <textarea id="input" spellcheck="false">My Course: How Plants Grow
+Introduction
+This course explains how plants grow from seed to flower. Plants use sunlight, water and soil to make their food through a process called **photosynthesis**.
+
+What you will learn
+- How photosynthesis works
+- Why roots matter
+- What leaves and stems do
+
+Materials needed
+- A pot and some soil
+- Seeds or seedlings
+- Water
+
+How photosynthesis works
+Plants capture sunlight in their leaves and turn it into energy. This process needs water and carbon dioxide to work.
+
+Conclusion
+Review what you learned and try planting a seed at home. Watch how it grows day by day.</textarea>
+      <p class="hint" id="hint">
+        Smart mode is on — short lines become headings, dash/• or numbered lines become lists, long lines become paragraphs. Markers like <code>##</code>, <code>-</code>, <code>**bold**</code> still work for fine control.
+      </p>
+    </div>
+
+    <div>
+      <label>Preset themes</label>
+      <div class="themes" id="themes"></div>
+
+      <label>Custom colors</label>
+      <div class="pickers">
+        <label class="picker" title="Primary accent (main headings, top border)">
+          <input type="color" id="cAccent">
+          <span>Accent</span>
+        </label>
+        <label class="picker" title="Primary accent dark (used for chapter headings)">
+          <input type="color" id="cAccentDark">
+          <span>Accent 2</span>
+        </label>
+        <label class="picker" title="Secondary accent (left border of section headings)">
+          <input type="color" id="cAccent2">
+          <span>Second</span>
+        </label>
+        <label class="picker" title="Secondary accent dark (used for section headings)">
+          <input type="color" id="cAccent2Dark">
+          <span>Second 2</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="exportBtn">Export as PDF</button>
+      <div class="btn-row">
+        <button class="btn ghost" id="copyBtn" type="button">Copy HTML</button>
+        <button class="btn ghost" id="clearBtn" type="button">Clear</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="stage-inner" id="stageInner">
+      <div id="page"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ------------------------------------------------------------------ */
+/*  Themes                                                             */
+/* ------------------------------------------------------------------ */
+const themes = [
+  {name:'Amber & sage', accent:'#C8843C', accentDark:'#8C5A24', accent2:'#7B9C77', accent2Dark:'#4A5A48'},
+  {name:'Ocean',        accent:'#2F7DB0', accentDark:'#1F5A80', accent2:'#5B8FA8', accent2Dark:'#355C6E'},
+  {name:'Plum',         accent:'#9C5B8C', accentDark:'#6E3D61', accent2:'#B08968', accent2Dark:'#7A5C43'},
+  {name:'Forest',       accent:'#4C7A4C', accentDark:'#345435', accent2:'#8A9A5B', accent2Dark:'#5C6A3D'},
+  {name:'Slate',        accent:'#5A6B87', accentDark:'#3D4A5E', accent2:'#8C7A65', accent2Dark:'#5E4F3F'},
+  {name:'Terracotta',   accent:'#C1583F', accentDark:'#8A3C2A', accent2:'#7B9C77', accent2Dark:'#4A5A48'},
+  {name:'Berry',        accent:'#A34762', accentDark:'#722F43', accent2:'#5A6B87', accent2Dark:'#3D4A5E'},
+  {name:'Charcoal',     accent:'#4A4A48', accentDark:'#2C2C2A', accent2:'#B08968', accent2Dark:'#7A5C43'}
+];
+
+// Current active colors (either from a preset or a custom pick)
+let colors = { ...themes[0] };
+let activeTheme = 0;      // -1 means custom
+let smartMode = true;     // smart (auto-organized) text mode
+let titleTouched = false; // user manually set the document title
+
+/* ------------------------------------------------------------------ */
+/*  Elements                                                           */
+/* ------------------------------------------------------------------ */
+const $input   = document.getElementById('input');
+const $title   = document.getElementById('doctitle');
+const $page    = document.getElementById('page');
+const $status  = document.getElementById('status');
+const $export  = document.getElementById('exportBtn');
+const $themes  = document.getElementById('themes');
+const $stageIn = document.getElementById('stageInner');
+const $cAccent     = document.getElementById('cAccent');
+const $cAccentDark = document.getElementById('cAccentDark');
+const $cAccent2    = document.getElementById('cAccent2');
+const $cAccent2Dark= document.getElementById('cAccent2Dark');
+
+/* ------------------------------------------------------------------ */
+/*  Autosave                                                           */
+/* ------------------------------------------------------------------ */
+const LS_KEY = 'course-formatter-v3';
+function save(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      text: $input.value,
+      title: $title.value,
+      colors: colors,
+      activeTheme: activeTheme,
+      smartMode: smartMode,
+      titleTouched: titleTouched
+    }));
+  }catch(e){}
+}
+function loadSaved(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(data.text) $input.value = data.text;
+    if(data.title) $title.value = data.title;
+    if(data.colors) colors = data.colors;
+    if(typeof data.activeTheme === 'number') activeTheme = data.activeTheme;
+    if(typeof data.smartMode === 'boolean') smartMode = data.smartMode;
+    if(data.title) titleTouched = (data.title !== 'My course');
+  }catch(e){}
+}
+
+/* ------------------------------------------------------------------ */
+/*  Color pickers                                                      */
+/* ------------------------------------------------------------------ */
+function syncColorInputs(){
+  $cAccent.value      = colors.accent;
+  $cAccentDark.value  = colors.accentDark;
+  $cAccent2.value     = colors.accent2;
+  $cAccent2Dark.value = colors.accent2Dark;
+}
+function onColorInput(){
+  colors = {
+    name: 'Custom',
+    accent:     $cAccent.value,
+    accentDark: $cAccentDark.value,
+    accent2:    $cAccent2.value,
+    accent2Dark:$cAccent2Dark.value
+  };
+  activeTheme = -1;
+  buildThemeButtons();
+  render(); save();
+}
+[$cAccent, $cAccentDark, $cAccent2, $cAccent2Dark].forEach(el=>{
+  el.addEventListener('input', onColorInput);
+});
+
+/* ------------------------------------------------------------------ */
+/*  Theme buttons                                                      */
+/* ------------------------------------------------------------------ */
+function buildThemeButtons(){
+  $themes.innerHTML = '';
+  themes.forEach((t,i)=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'theme-btn' + (i===activeTheme ? ' active' : '');
+    b.title = t.name;
+    b.innerHTML = `<span style="background:${t.accent}"></span><span style="background:${t.accent2}"></span>`;
+    b.addEventListener('click', ()=>{
+      activeTheme = i;
+      colors = { ...themes[i] };
+      syncColorInputs();
+      buildThemeButtons();
+      render(); save();
+    });
+    $themes.appendChild(b);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Parser                                                             */
+/* ------------------------------------------------------------------ */
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function inlineMarkdown(s){
+  let out = escapeHtml(s);
+  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, '$1<em>$2</em>');
+  return out;
+}
+function parseToBlocks(raw){
+  const lines = raw.replace(/\r\n/g,'\n').split('\n');
+  const blocks = [];
+  let list = null;   // {type:'ul', items:[]}
+  let paraBuf = [];
+
+  function flushPara(){
+    if(paraBuf.length){
+      blocks.push({type:'p', html: inlineMarkdown(paraBuf.join(' '))});
+      paraBuf = [];
+    }
+  }
+  function flushList(){
+    if(list){ blocks.push(list); list = null; }
+  }
+
+  lines.forEach(line=>{
+    const t = line.trim();
+    if(t === ''){ flushPara(); flushList(); return; }
+
+    if(t === '---' || t === '***' || t === '___'){
+      flushPara(); flushList();
+      blocks.push({type:'hr'});
+      return;
+    }
+    if(t.startsWith('### ')){
+      flushPara(); flushList();
+      blocks.push({type:'h3', html: inlineMarkdown(t.slice(4))});
+    } else if(t.startsWith('## ')){
+      flushPara(); flushList();
+      blocks.push({type:'h2', html: inlineMarkdown(t.slice(3))});
+    } else if(t.startsWith('# ')){
+      flushPara(); flushList();
+      blocks.push({type:'h1', html: inlineMarkdown(t.slice(2))});
+    } else if(t.startsWith('- ') || t.startsWith('* ')){
+      flushPara();
+      if(!list){ list = {type:'ul', items:[]}; }
+      list.items.push(inlineMarkdown(t.slice(2)));
+    } else {
+      flushList();
+      paraBuf.push(t);
+    }
+  });
+  flushPara();
+  flushList();
+  return blocks;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Smart parsing — auto-organizes plain text without markdown         */
+/* ------------------------------------------------------------------ */
+// Heuristics used:
+//  - Explicit markdown markers (#, ##, ###, -, *, ***) always win.
+//  - Lines matching heading clues become headings (H1/H2/H3):
+//      * starts with a keyword (Chapter, Lesson, Introduction, ...)
+//      * short all-caps line
+//      * short line ending with ":" (or a Title-Case short line)
+//    A heading ending with ":" pulls the following short lines into a list.
+//  - Lines starting with "-", "*", "•", or "1." / "1)" become lists.
+//  - Everything else becomes paragraph(s).
+
+function looksLikeListLine(l){
+  return /^[-*•·▪‣](\s|$)/.test(l) || /^\d+[.)]\s/.test(l) || /^\(\d+\)\s/.test(l);
+}
+function listType(l){
+  return /^[-*•·▪‣]/.test(l) ? 'ul' : 'ol';
+}
+function stripListMark(l){
+  return l.replace(/^[-*•·▪‣]\s+|^\d+[.)]\s+|^\(\d+\)\s+/, '').trim();
+}
+function stripTrailingColon(s){
+  return s.replace(/:\s*$/, '').trim();
+}
+function isSentence(l){
+  if(!/[.!?]["']?\s*$/.test(l)) return false;
+  if(/\b(the|a|an|is|are|was|were|and|but|or|of|to|for|in|on|with|it|this|that|they|you|we|he|she)\b/i.test(l)) return true;
+  return l.length > 80;
+}
+function headingInfo(l){
+  if(!l || l.length === 0) return null;
+  const len = l.length;
+  if(looksLikeListLine(l)) return null;
+  if(/^[#>]/.test(l)) return null;
+  if(len > 70) return null;
+  const words = l.split(/\s+/).filter(Boolean);
+  const nw = words.length;
+  if(nw === 0) return null;
+  const allCaps  = /^[A-Z0-9][A-Z0-9\s\-_&:'",.()]{2,}$/.test(l) && nw <= 9;
+  const kwStrong = /^(chapter|chapters|lesson|lessons|part|parts|section|sections|module|modules|unit|units|topic|topics|lab|labs|exercise|exercises|worksheet|worksheets|quiz|quizzes|test|tests|exam|exams|assignment|assignments)\b/i.test(l);
+  const kwWeak   = /^(introduction|overview|conclusion|conclusions|summary|summaries|objective|objectives|contents?|references?|appendix|appendices|glossary|key terms|vocabulary|procedure|procedures|materials?|activities?|homework|discussion|discussions|recap|notes|directions?|instructions?|answers?|review|reviews|learning outcomes)\b/i.test(l);
+  const endsColon    = /:$/.test(l);
+  const endsSentence = /[.!?]["']?\s*$/.test(l);
+  const firstCap     = /^[A-Z]/.test(l);
+  const cap  = words.filter(w=>/^[A-Z][a-z]/.test(w) || /^[A-Z]{2,}/.test(w)).length;
+  const titleCase = nw >= 2 && firstCap && cap/nw >= 0.6;
+
+  if(nw === 1 && !endsColon && !allCaps && !kwStrong && !kwWeak) return null;
+  if(endsSentence && !allCaps && isSentence(l)) return null;
+
+  let level = null;
+  if(kwStrong)                   level = 1;
+  else if(kwWeak)                level = 2;
+  else if(allCaps)               level = 1;
+  else if(endsColon && nw <= 10) level = 2;
+  else if(titleCase && nw <= 7)  level = 2;
+  else if(nw <= 4 && !endsSentence && firstCap) level = 2;
+  else if(nw <= 8 && !endsSentence && firstCap) level = 3;
+  return level ? { level: level } : null;
+}
+
+function smartParseToBlocks(raw){
+  const lines = raw.replace(/\r\n/g, '\n').split('\n');
+  const blocks = [];
+  const n = lines.length;
+
+  function pushPara(tokens){
+    if(tokens.length){
+      blocks.push({ type: 'p', html: inlineMarkdown(tokens.join(' ')) });
+    }
+  }
+
+  let i = 0;
+  while(i < n){
+    const t = lines[i].trim();
+    if(!t){ i++; continue; }
+
+    // Explicit markdown overrides smart detection.
+    if(t === '---' || t === '***' || t === '___'){ blocks.push({type:'hr'}); i++; continue; }
+    if(t.startsWith('### ')){ blocks.push({type:'h3', html: inlineMarkdown(t.slice(4))}); i++; continue; }
+    if(t.startsWith('## ')){ blocks.push({type:'h2', html: inlineMarkdown(t.slice(3))}); i++; continue; }
+    if(t.startsWith('# ')){ blocks.push({type:'h1', html: inlineMarkdown(t.slice(2))}); i++; continue; }
+
+    // Lists (bullets, •, numbered).
+    if(looksLikeListLine(t)){
+      const type = listType(t);
+      const items = [];
+      let j = i;
+      while(j < n){
+        const lt = lines[j].trim();
+        if(!lt || !looksLikeListLine(lt)) break;
+        if(listType(lt) !== type) break;
+        items.push(inlineMarkdown(stripListMark(lt)));
+        j++;
+      }
+      blocks.push({ type: type, start: 1, items: items });
+      i = j;
+      continue;
+    }
+
+    // Headings.
+    const hi = headingInfo(t);
+    if(hi){
+      let text = stripTrailingColon(t);
+      if(/:$/.test(t)){
+        // A heading ending in ":" absorbs the next short lines as a list.
+        const gathered = [];
+        let j = i + 1;
+        while(j < n){
+          const nt = lines[j].trim();
+          if(!nt) break;
+          if(looksLikeListLine(nt)){ gathered.push(nt); j++; continue; }
+          if(isSentence(nt) || headingInfo(nt)) break;
+          if(nt.length <= 42){ gathered.push('- ' + nt); j++; continue; }
+          break;
+        }
+        if(gathered.length){
+          blocks.push({ type: 'h' + hi.level, html: inlineMarkdown(text) });
+          const items = gathered.map(g => inlineMarkdown(stripListMark(g)));
+          blocks.push({ type: 'ul', start: 1, items: items });
+          i = j;
+          continue;
+        }
+      }
+      blocks.push({ type: 'h' + hi.level, html: inlineMarkdown(text) });
+      i++;
+      continue;
+    }
+
+    // Paragraph: join consecutive non-empty, non-list, non-heading lines.
+    const tokens = [t];
+    let j = i + 1;
+    while(j < n){
+      const nt = lines[j].trim();
+      if(!nt) break;
+      if(looksLikeListLine(nt)) break;
+      if(nt === '---' || nt === '***' || nt === '___') break;
+      if(nt.startsWith('# ') || nt.startsWith('## ') || nt.startsWith('### ')) break;
+      if(headingInfo(nt)) break;
+      tokens.push(nt);
+      j++;
+    }
+    pushPara(tokens);
+    i = j;
+  }
+  return blocks;
+}
+
+function detectTitle(raw){
+  const lines = raw.replace(/\r\n/g, '\n').split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return null;
+  const first = lines[0];
+  if(first.startsWith('# ')) return first.slice(2).trim();
+  if(first.length > 70) return null;
+  if(/[.!?]\s*$/.test(first)) return null;
+  if(looksLikeListLine(first)) return null;
+  return first;
+}
+
+function blocksToPreviewHtml(blocks){
+  return blocks.map(b=>{
+    if(b.type === 'p')  return `<p>${b.html}</p>`;
+    if(b.type === 'hr') return '<hr>';
+    if(b.type === 'h1') return `<h1 class="section">${b.html}</h1>`;
+    if(b.type === 'h2') return `<h2 class="section">${b.html}</h2>`;
+    if(b.type === 'h3') return `<h3 class="section">${b.html}</h3>`;
+    if(b.type === 'ul'){
+      return '<ul>' + b.items.map(i=>`<li>${i}</li>`).join('') + '</ul>';
+    }
+    if(b.type === 'ol'){
+      return '<ol>' + b.items.map(i=>`<li>${i}</li>`).join('') + '</ol>';
+    }
+    return '';
+  }).join('');
+}
+
+/* ------------------------------------------------------------------ */
+/*  Preview                                                            */
+/* ------------------------------------------------------------------ */
+function applyThemeVars(el){
+  el.style.setProperty('--accent', colors.accent);
+  el.style.setProperty('--accent-dark', colors.accentDark);
+  el.style.setProperty('--accent2', colors.accent2);
+  el.style.setProperty('--accent2-dark', colors.accent2Dark);
+}
+
+function buildDocument(){
+  const raw = $input.value;
+  let parsing = raw;
+  let title = $title.value.trim() || 'Untitled';
+
+  if(!titleTouched){
+    // Auto-detect the document title from the first line of plain text,
+    // then remove that line so it never duplicates into the first paragraph
+    // (even when the title has no blank line after it).
+    const det = detectTitle(raw);
+    if(det){
+      title = det;
+      $title.value = title;
+      parsing = removeFirstLine(raw);
+    }
+  }
+
+  const blocks = smartMode ? smartParseToBlocks(parsing) : parseToBlocks(parsing);
+
+  // If the first parsed block is the same text, drop it from the body.
+  if(!titleTouched){
+    const firstHtml = blocks.length ? stripTags(blocks[0].html).trim().toLowerCase() : '';
+    if(firstHtml && firstHtml === title.toLowerCase()){
+      blocks.shift();
+    }
+  }
+  return { title: title, blocks: blocks };
+}
+
+function removeFirstLine(raw){
+  const lines = raw.replace(/\r\n/g, '\n').split('\n');
+  let idx = 0;
+  while(idx < lines.length && !lines[idx].trim()) idx++;
+  if(idx < lines.length) lines.splice(idx, 1);
+  return lines.join('\n');
+}
+
+function render(){
+  applyThemeVars($page);
+  const { title, blocks } = buildDocument();
+  const body = blocksToPreviewHtml(blocks);
+
+  $page.innerHTML =
+    `<img class="doc-logo" src="LOGOPNG.png" alt="">` +
+    `<h1 class="doc-title">${escapeHtml(title)}</h1>` +
+    (body.trim() ? body : '<p class="empty">Start typing on the left to see your document take shape here.</p>');
+
+  drawPageGuides();
+  updateHint();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page guides                                                        */
+/* ------------------------------------------------------------------ */
+const A4_W_PT = 595.28, A4_H_PT = 841.89;
+const PDF_MARGIN = 56; // pt
+
+function drawPageGuides(){
+  $stageIn.querySelectorAll('.page-guide').forEach(n=>n.remove());
+  const pageH = $page.offsetHeight;
+  const cs = getComputedStyle($page);
+  const padT = parseFloat(cs.paddingTop);
+  const padB = parseFloat(cs.paddingBottom);
+  const padL = parseFloat(cs.paddingLeft);
+  const padR = parseFloat(cs.paddingRight);
+  const contentW = $page.clientWidth - padL - padR;
+  if(contentW <= 0) return;
+
+  const pdfContentW = A4_W_PT - PDF_MARGIN * 2;
+  const usableH = A4_H_PT - PDF_MARGIN * 2;
+  const ptPerPx = pdfContentW / contentW;
+  const pageHeightPx = usableH / ptPerPx;
+
+  let y = padT;
+  let pageNum = 1;
+  while (y + pageHeightPx < pageH - padB - 2){
+    y += pageHeightPx;
+    pageNum++;
+    const g = document.createElement('div');
+    g.className = 'page-guide';
+    g.style.top = y + 'px';
+    g.innerHTML = `<span>page ${pageNum}</span>`;
+    $stageIn.appendChild(g);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  PDF export — vector, white background, block-aware page breaks     */
+/* ------------------------------------------------------------------ */
+//
+// Layout engine:
+//  - We render each block as text (not a raster), so colors are exact.
+//  - Each block is measured; if it doesn't fit on the remaining space on
+//    the current page, we move it to the next page (unless it's the very
+//    first block on a page, in which case we split it line-by-line).
+//  - List items break individually, so a long list flows naturally
+//    without cutting any single item in half.
+//  - The background of every PDF page is pure white (#FFFFFF).
+//
+async function exportPdf(){
+  const { title: docTitle, blocks } = buildDocument();
+  const rawTitle = (docTitle || 'document');
+  const slug = rawTitle.toLowerCase()
+    .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,80);
+  const filename = (slug || 'document') + '.pdf';
+
+  setStatus('Preparing PDF…');
+  $export.disabled = true;
+  const prevLabel = $export.textContent;
+  $export.textContent = 'Preparing…';
+
+  try{
+    if(document.fonts && document.fonts.ready){
+      try { await document.fonts.ready; } catch(e){}
+    }
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit:'pt', format:'a4', orientation:'portrait' });
+
+    const A4_W = pdf.internal.pageSize.getWidth();
+    const A4_H = pdf.internal.pageSize.getHeight();
+    const M = PDF_MARGIN;
+    const contentW = A4_W - M * 2;
+    const contentBottom = A4_H - M;
+
+    // White background on every page (we call this on each new page).
+    function paintWhite(){
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, A4_W, A4_H, 'F');
+    }
+
+    // PDF font mapping (jsPDF built-in fonts only — colors are exact).
+    // Fraunces / Inter aren't available as built-in PDF fonts, so we use
+    // Times (serif, for headings) and Helvetica (sans, for body) which
+    // are extremely close visually and always render correctly.
+    const FONT_SERIF = 'times';
+    const FONT_SANS  = 'helvetica';
+
+    const INK        = [32, 38, 46];       // #20262E
+    const INK_SOFT   = [91, 100, 112];     // #5B6470
+    const BODY_COLOR = [51, 57, 63];       // #33393F
+    const RULE_LIGHT = [228, 223, 211];    // #E4DFD3
+
+    const hexToRgb = hex => {
+      const h = hex.replace('#','');
+      return [
+        parseInt(h.slice(0,2),16),
+        parseInt(h.slice(2,4),16),
+        parseInt(h.slice(4,6),16)
+      ];
+    };
+
+    const accent      = hexToRgb(colors.accent);
+    const accentDark  = hexToRgb(colors.accentDark);
+    const accent2     = hexToRgb(colors.accent2);
+    const accent2Dark = hexToRgb(colors.accent2Dark);
+
+    // Layout constants (points)
+    const FS = {
+      title:   19,
+      h1:      16,
+      h2:      12,
+      h3:      10,
+      body:    10.5,
+    };
+    const LH = {
+      title:   FS.title  * 1.18,
+      h1:      FS.h1     * 1.25,
+      h2:      FS.h2     * 1.35,
+      h3:      FS.h3     * 1.35,
+      body:    FS.body   * 1.55,
+    };
+    const SPACE = {
+      beforeH1: 22,
+      beforeH2: 16,
+      beforeH3: 12,
+      afterHead: 4,
+      paraGap:  8,
+      liGap:    3,
+      ruleGap:  12,
+      titleBottom: 22,
+      titleRuleAfter: 14,
+    };
+
+    let y = M;
+
+    // Brand logo at the top of the document.
+    if(logoAsset){
+      const logoW = 170;
+      const logoH = logoW * (logoAsset.h / logoAsset.w);
+      pdf.addImage(logoAsset.data, 'PNG', M, M, logoW, logoH);
+      y += logoH + 28;
+    }
+
+    // ---- Title block ---------------------------------------------------
+    // Wrapped the same way as body text: words wrap normally and any single
+    // token wider than the page is broken character-by-character so the
+    // title never sticks out beyond the frame.
+    const titleLines = wrapPlainText(docTitle, contentW, FONT_SERIF, FS.title);
+    titleLines.forEach(line=>{
+      ensureSpace(LH.title);
+      y += LH.title;
+      drawSegments([{text:line, bold:true}], M, y, FONT_SERIF, FS.title, INK);
+    });
+    // accent rule under title
+    y += 8;
+    pdf.setDrawColor(...accent);
+    pdf.setLineWidth(2.4);
+    pdf.line(M, y, M + contentW, y);
+    y += SPACE.titleBottom;
+
+    // ---- Blocks (parsed via buildDocument above) -----------------------
+
+    // turn a block into a list of "atomic lines" that can be placed one by one.
+    // Atomic lines keep formatting info so we can render them independently.
+    function layoutBlock(block){
+      if(block.type === 'h1'){
+        return [{kind:'h1', text: stripTags(block.html), gapBefore: SPACE.beforeH1, font:[FONT_SERIF,'bold'], size:FS.h1, lineH:LH.h1, color:accentDark}];
+      }
+      if(block.type === 'h2'){
+        return [{kind:'h2', text: stripTags(block.html), gapBefore: SPACE.beforeH2, font:[FONT_SANS,'bold'], size:FS.h2, lineH:LH.h2, color:accent2Dark, barColor:accent2}];
+      }
+if(block.type === 'h3'){
+      return [{kind:'h3', text: stripTags(block.html), gapBefore: SPACE.beforeH3, font:[FONT_SANS,'bold'], size:FS.h3, lineH:LH.h3, color:INK_SOFT}];
+    }
+      if(block.type === 'hr'){
+        return [{kind:'hr', gapBefore:SPACE.ruleGap}];
+      }
+      if(block.type === 'p'){
+        // build a rich-line layout: an array of {segments, width, height}
+        const lines = layoutRichParagraph(block.html, contentW, FONT_SANS, FS.body);
+        return lines.map((ln,i)=>({
+          kind:'p-line',
+          segments: ln.segments,
+          gapBefore: i===0 ? 0 : 0,
+          lineH: LH.body,
+          trailing: i===lines.length-1 ? SPACE.paraGap : 0
+        }));
+      }
+      if(block.type === 'ul' || block.type === 'ol'){
+        // Each item is kept as one unit so a list never splits mid-item.
+        // Only items taller than a full page fall back to line-by-line flow.
+        const items = block.items.map((itemHtml, idx)=>{
+          const itemLines = layoutRichParagraph(itemHtml, contentW - 14, FONT_SANS, FS.body);
+          return {
+            num: (block.start || 1) + idx,
+            height: itemLines.length * LH.body,
+            lines: itemLines.map((ln, li)=>({ segments: ln.segments, firstOfItem: li === 0 }))
+          };
+        });
+        return { type: block.type, items: items };
+      }
+      return [];
+    }
+
+    // Very small markdown -> segments parser for PDF rendering.
+    // Each segment = {text, bold, italic}.
+    function htmlToSegments(html){
+      // Convert our known HTML (<strong>, <em>) into segments. Strip any other tags.
+      const segs = [];
+      let i = 0;
+      let bold = 0, italic = 0;
+      let buf = '';
+      function flush(){ if(buf){ segs.push({text:buf, bold:bold>0, italic:italic>0}); buf=''; } }
+      while(i < html.length){
+        if(html.startsWith('<strong>', i)){ flush(); bold++; i += 8; continue; }
+        if(html.startsWith('</strong>', i)){ flush(); bold--; i += 9; continue; }
+        if(html.startsWith('<em>', i)){ flush(); italic++; i += 4; continue; }
+        if(html.startsWith('</em>', i)){ flush(); italic--; i += 5; continue; }
+        if(html[i] === '<'){
+          // skip any other tag
+          const end = html.indexOf('>', i);
+          if(end === -1) break;
+          i = end + 1;
+          continue;
+        }
+        buf += html[i];
+        i++;
+      }
+      flush();
+      return segs;
+    }
+
+    // Measure a single segment's width using the currently set font.
+    function segWidth(seg, fontFamily, size){
+      pdf.setFont(fontFamily, seg.bold ? 'bold' : (seg.italic ? 'italic' : 'normal'));
+      pdf.setFontSize(size);
+      return pdf.getTextWidth(seg.text);
+    }
+
+    // Wrap a paragraph (list of segments) into lines that fit within maxW.
+    // Normal words wrap at spaces; tokens wider than maxW (long URLs, etc.)
+    // are broken character-by-character so nothing ever overflows.
+    function layoutRichParagraph(html, maxW, fontFamily, size){
+      const segs = htmlToSegments(html);
+      const lines = [];
+      let cur = []; // segments on the current line
+      let curW = 0;
+
+      function measure(seg){ return segWidth(seg, fontFamily, size); }
+      function put(seg){
+        cur.push(seg);
+        curW += measure(seg);
+      }
+      function pushLine(){
+        if(cur.length) lines.push({ segments: cur });
+        cur = [];
+        curW = 0;
+      }
+
+      segs.forEach(seg=>{
+        // split the segment on spaces so we can wrap inside it
+        const words = seg.text.split(/(\s+)/); // keep spaces
+        words.forEach(word=>{
+          if(word === '') return;
+          const w = measure({ ...seg, text: word });
+          if(w > maxW){
+            // A single token is too wide — break it character by character.
+            let buf = '';
+            for(const ch of word){
+              const test = buf + ch;
+              if(buf && curW + measure({ ...seg, text: test }) > maxW){
+                put({ text: buf, bold: seg.bold, italic: seg.italic });
+                pushLine();
+                buf = '';
+              }
+              buf += ch;
+            }
+            if(buf) put({ text: buf, bold: seg.bold, italic: seg.italic });
+            return;
+          }
+          if(curW + w > maxW && cur.length){
+            pushLine();
+            // drop a leading space
+            if(/^\s+$/.test(word)) return;
+          }
+          put({ text: word, bold: seg.bold, italic: seg.italic });
+        });
+      });
+      if(cur.length) pushLine();
+      if(lines.length === 0) lines.push({ segments: [] });
+      return lines;
+    }
+
+    // Wrap plain text (no markup) into lines within maxW, char-breaking any
+    // token wider than maxW so no line can overflow the page.
+    function wrapPlainText(text, maxW, fontFamily, size){
+      pdf.setFont(fontFamily, 'bold');
+      pdf.setFontSize(size);
+      const lines = [];
+      let cur = '';
+      let curW = 0;
+      function next(line){ lines.push(line); cur = ''; curW = 0; }
+      String(text).split(/(\s+)/).forEach(tok=>{
+        if(tok === '') return;
+        const w = pdf.getTextWidth(tok);
+        if(w > maxW){
+          if(cur !== '') next(cur);
+          let buf = '';
+          for(const ch of tok){
+            const test = buf + ch;
+            if(buf && curW + pdf.getTextWidth(test) > maxW){
+              next(buf);
+              buf = '';
+            }
+            buf += ch;
+          }
+          if(buf !== '') next(buf);
+          return;
+        }
+        if(cur !== '' && curW + w > maxW){
+          next(cur);
+          if(/^\s+$/.test(tok)) return;
+        }
+        cur += tok;
+        curW += w;
+      });
+      if(cur !== '') lines.push(cur);
+      if(lines.length === 0) lines.push('');
+      return lines;
+    }
+
+    // Render a segment line at baseline y, starting at x. Returns nothing.
+    function drawSegments(segments, x, baselineY, fontFamily, size, color){
+      let cx = x;
+      pdf.setTextColor(...color);
+      segments.forEach(s=>{
+        pdf.setFont(fontFamily, s.bold ? 'bold' : (s.italic ? 'italic' : 'normal'));
+        pdf.setFontSize(size);
+        pdf.text(s.text, cx, baselineY);
+        cx += pdf.getTextWidth(s.text);
+      });
+    }
+
+    // Advance y safely, adding a new page if needed. Returns true if new page.
+    function ensureSpace(needed){
+      if(y + needed > contentBottom){
+        pdf.addPage();
+        paintWhite();
+        y = M;
+        return true;
+      }
+      return false;
+    }
+
+    // ---- Render every block -------------------------------------------
+    blocks.forEach(block=>{
+      const atoms = layoutBlock(block);
+
+      if(block.type === 'ul' || block.type === 'ol'){
+        // List items are atomic: a whole item is kept on one page unless the
+        // item alone is taller than a page (then it flows line-by-line).
+        const fullPage = contentBottom - M;
+        atoms.items.forEach((item, idx)=>{
+          const gap = (idx === 0 ? 0 : SPACE.liGap);
+          const trailing = (idx === atoms.items.length - 1 ? SPACE.paraGap : 0);
+          const mark = block.type === 'ol' ? String(item.num) + '.' : null;
+
+          if(item.height <= fullPage){
+            // Keep the entire item together on one page.
+            if(y + gap + item.height + trailing > contentBottom){
+              pdf.addPage();
+              paintWhite();
+              y = M;
+            }
+            y += gap;
+            let markW = 0;
+            item.lines.forEach((ln)=>{
+              if(ln.firstOfItem){
+                if(mark !== null){
+                  pdf.setFont(FONT_SANS, 'bold');
+                  pdf.setFontSize(FS.body);
+                  pdf.setTextColor(...BODY_COLOR);
+                  markW = pdf.getTextWidth(mark);
+                  pdf.text(mark, M + 4, y + LH.body * 0.72);
+                } else {
+                  pdf.setFillColor(...BODY_COLOR);
+                  pdf.circle(M + 4, y + LH.body * 0.5, 1.9, 'F');
+                }
+              }
+              drawSegments(ln.segments, M + 14 + (mark !== null ? markW : 0), y + LH.body * 0.72, FONT_SANS, FS.body, BODY_COLOR);
+              y += LH.body;
+            });
+          } else {
+            // Oversized item: flow it across pages line by line.
+            if(idx !== 0){ ensureSpace(gap); y += gap; }
+            let markW = 0;
+            item.lines.forEach((ln)=>{
+              ensureSpace(LH.body);
+              if(ln.firstOfItem){
+                if(mark !== null){
+                  pdf.setFont(FONT_SANS, 'bold');
+                  pdf.setFontSize(FS.body);
+                  pdf.setTextColor(...BODY_COLOR);
+                  markW = pdf.getTextWidth(mark);
+                  pdf.text(mark, M + 4, y + LH.body * 0.72);
+                } else {
+                  pdf.setFillColor(...BODY_COLOR);
+                  pdf.circle(M + 4, y + LH.body * 0.5, 1.9, 'F');
+                }
+              }
+              drawSegments(ln.segments, M + 14 + (mark !== null ? markW : 0), y + LH.body * 0.72, FONT_SANS, FS.body, BODY_COLOR);
+              y += LH.body;
+            });
+          }
+        });
+        return;
+      }
+
+      // Heading / paragraph: try to keep the whole heading with its block.
+      if(block.type === 'h1' || block.type === 'h2' || block.type === 'h3'){
+        const a = atoms[0];
+        // A heading should never be the last thing on a page: reserve
+        // its own height + at least one full body line below.
+        const needed = a.gapBefore + a.lineH + LH.body;
+        ensureSpace(needed);
+        y += a.gapBefore;
+
+        if(a.kind === 'h2'){
+          // left color bar next to h2
+          pdf.setFillColor(...a.barColor);
+          pdf.rect(M, y + 1, 3.4, a.lineH - 2, 'F');
+          drawSegments([{text:a.text, bold:true}], M + 10, y + a.lineH * 0.72, a.font[0], a.size, a.color);
+        } else {
+          drawSegments([{text:a.text, bold:true}], M, y + a.lineH * 0.72, a.font[0], a.size, a.color);
+        }
+        y += a.lineH + SPACE.afterHead;
+        return;
+      }
+
+      if(block.type === 'hr'){
+        ensureSpace(SPACE.ruleGap + 1);
+        y += SPACE.ruleGap;
+        pdf.setDrawColor(...RULE_LIGHT);
+        pdf.setLineWidth(0.6);
+        pdf.line(M, y, M + contentW, y);
+        y += SPACE.ruleGap;
+        return;
+      }
+
+      if(block.type === 'p'){
+        // Paragraph: never split mid-line. If a paragraph is taller than a
+        // full page, we allow it to continue on the next page line-by-line.
+        atoms.forEach(atom=>{
+          ensureSpace(atom.lineH + (atom.trailing||0));
+          drawSegments(atom.segments, M, y + atom.lineH * 0.72, FONT_SANS, FS.body, BODY_COLOR);
+          y += atom.lineH + (atom.trailing||0);
+        });
+        return;
+      }
+    });
+
+    pdf.save(filename);
+    setStatus(`Saved ${filename}`, false, true);
+  } catch(err){
+    console.error(err);
+    setStatus('Export failed. See console.', true);
+  } finally {
+    $export.disabled = false;
+    $export.textContent = prevLabel;
+  }
+}
+
+function stripTags(html){
+  return html.replace(/<[^>]+>/g,'');
+}
+
+function setStatus(msg, isError, isOk){
+  $status.textContent = msg || '';
+  $status.classList.toggle('err', !!isError);
+  $status.classList.toggle('ok', !!isOk);
+}
+
+function updateHint(){
+  const el = document.getElementById('hint');
+  if(!el) return;
+  el.innerHTML = smartMode
+    ? 'Smart mode is on — short lines become headings, dash/• or numbered lines become lists, long lines become paragraphs. Markers like <code>##</code>, <code>-</code>, <code>**bold**</code> still work for fine control.'
+    : '<code># </code> main title · <code>## </code> section · <code>### </code> small heading · <code>- </code> bullet · <code>**bold**</code> · <code>*italic*</code> · blank line = new paragraph.';
+}
+
+/* ------------------------------------------------------------------ */
+/*  Buttons + shortcuts                                                */
+/* ------------------------------------------------------------------ */
+const $smartToggle = document.getElementById('smartToggle');
+$smartToggle.addEventListener('change', ()=>{
+  smartMode = $smartToggle.checked;
+  render(); save();
+});
+
+$export.addEventListener('click', exportPdf);
+
+document.getElementById('copyBtn').addEventListener('click', async ()=>{
+  try{
+    await navigator.clipboard.writeText($page.innerHTML);
+    setStatus('Rendered HTML copied to clipboard.', false, true);
+  }catch(e){ setStatus('Copy failed.', true); }
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(!confirm('Clear the text and title?')) return;
+  $input.value = '';
+  $title.value = 'My course';
+  titleTouched = false;
+  render(); save();
+  setStatus('Cleared.');
+});
+
+let rafId = null;
+function scheduleRender(){
+  if(rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(()=>{ render(); save(); });
+}
+$input.addEventListener('input', scheduleRender);
+$title.addEventListener('input', ()=>{ titleTouched = true; scheduleRender(); });
+
+document.addEventListener('keydown', (e)=>{
+  if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's'){
+    e.preventDefault();
+    exportPdf();
+  }
+});
+window.addEventListener('resize', drawPageGuides);
+
+/* ------------------------------------------------------------------ */
+/*  Logo embedding for PDF export                                      */
+/* ------------------------------------------------------------------ */
+let logoAsset = null;
+function preloadLogo(){
+  const img = new Image();
+  img.onload = ()=>{
+    try{
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      logoAsset = {
+        data: c.toDataURL('image/png'),
+        w: img.naturalWidth,
+        h: img.naturalHeight
+      };
+    }catch(e){}
+  };
+  img.src = 'LOGOPNG.png';
+}
+
+/* ------------------------------------------------------------------ */
+/*  Boot                                                               */
+/* ------------------------------------------------------------------ */
+loadSaved();
+$smartToggle.checked = smartMode;
+syncColorInputs();
+buildThemeButtons();
+render();
+preloadLogo();
+</script>
+</body>
+</html>
