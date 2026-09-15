@@ -1395,11 +1395,14 @@ async function exportPdf(){
     const contentRight = A4_W - M;
 
     // ---- Arabic rendering ------------------------------------------
-    // jsPDF cannot shape / join Arabic letters. When a run contains Arabic
-    // text we rasterize it with the browser's text engine (canvas + the
-    // Cairo/Amiri web fonts) and embed the result as an image, so Arabic
-    // reads correctly, joined, and right-to-left in the PDF.
+    // jsPDF cannot shape / join Arabic letters. When text contains Arabic we
+    // rasterize each LINE with the browser's text engine (canvas + the
+    // Cairo/Amiri web fonts) and embed the result as a crisp image, so Arabic
+    // reads correctly, connected, and right-to-left inside the PDF. AR_SCALE
+    // renders at a multiple of the target size so the rastered text looks
+    // sharp instead of like a low-resolution screenshot.
     const AR_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0660-\u0669]/;
+    const AR_SCALE = 3;
     const hasArabic = s => AR_RE.test(String(s));
     let arCanvas = null, arCtx = null;
     function arabicGetCtx(){
@@ -1410,7 +1413,7 @@ async function exportPdf(){
       return arCtx;
     }
     function arabicFontCss(weight, italic, sizePt, serif){
-      const px = sizePt * (96 / 72);
+      const px = Math.round(sizePt * (96 / 72) * AR_SCALE);
       const face = serif ? '"Amiri","Cairo",serif' : '"Cairo","Amiri",sans-serif';
       return (italic ? 'italic ' : '') + weight + ' ' + px + 'px ' + face;
     }
@@ -1418,26 +1421,29 @@ async function exportPdf(){
       try{
         const ctx = arabicGetCtx();
         ctx.font = arabicFontCss(bold ? 700 : 400, italic, sizePt, false);
-        return ctx.measureText(String(text)).width * 0.75;
+        return ctx.measureText(String(text)).width * 0.75 / AR_SCALE;
       }catch(e){ return null; }
     }
     function arabicSprite(text, bold, italic, sizePt, rgb, serif){
       try{
         const ctx = arabicGetCtx();
-        const px = sizePt * (96 / 72);
+        const px = Math.round(sizePt * (96 / 72) * AR_SCALE);
+        const s = 0.75 / AR_SCALE;
         ctx.font = arabicFontCss(bold ? 700 : 400, italic, sizePt, serif);
         const m = ctx.measureText(String(text));
-        const wPx = Math.ceil(m.width) + 4;
-        const aPx = Math.ceil(m.actualBoundingBoxAscent || px * 0.9) + 2;
-        const dPx = Math.ceil(m.actualBoundingBoxDescent || px * 0.2) + 2;
+        const pad = 2 * AR_SCALE;
+        const wPx = Math.ceil(m.width + pad * 2);
+        const aPx = Math.ceil((m.actualBoundingBoxAscent || px * 0.9) + pad);
+        const dPx = Math.ceil((m.actualBoundingBoxDescent || px * 0.2) + pad);
+        if(wPx <= 0) return null;
         arCanvas.width = wPx;
         arCanvas.height = aPx + dPx;
         ctx.clearRect(0, 0, wPx, aPx + dPx);
         ctx.font = arabicFontCss(bold ? 700 : 400, italic, sizePt, serif);
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
-        ctx.fillText(String(text), 2, aPx);
-        return { img: arCanvas.toDataURL('image/png'), wPt: wPx * 0.75, aPt: aPx * 0.75, dPt: dPx * 0.75 };
+        ctx.fillText(String(text), pad, aPx);
+        return { img: arCanvas.toDataURL('image/png'), wPt: wPx * s, aPt: aPx * s, dPt: dPx * s };
       }catch(e){ return null; }
     }
 
@@ -1539,8 +1545,8 @@ if(block.type === 'h3'){
     }
 
     // Measure a single segment's width using the currently set font.
-    function segWidth(seg, fontFamily, size){
-      const ar = hasArabic(seg.text) ? arabicWidthPt(seg.text, seg.bold, seg.italic, size) : null;
+    function segWidth(seg, fontFamily, size, canvasSpaces){
+      const ar = (hasArabic(seg.text) || (canvasSpaces && /^\s+$/.test(seg.text))) ? arabicWidthPt(seg.text, seg.bold, seg.italic, size) : null;
       if(ar != null) return ar;
       pdf.setFont(fontFamily, seg.bold ? 'bold' : (seg.italic ? 'italic' : 'normal'));
       pdf.setFontSize(size);
@@ -1555,8 +1561,9 @@ if(block.type === 'h3'){
       const lines = [];
       let cur = []; // segments on the current line
       let curW = 0;
+      const canvasSpaces = AR_RE.test(html);
 
-      function measure(seg){ return segWidth(seg, fontFamily, size); }
+      function measure(seg){ return segWidth(seg, fontFamily, size, canvasSpaces); }
       function put(seg){
         cur.push(seg);
         curW += measure(seg);
@@ -1604,8 +1611,9 @@ if(block.type === 'h3'){
     // Wrap plain text (no markup) into lines within maxW, char-breaking any
     // token wider than maxW so no line can overflow the page.
     function wrapPlainText(text, maxW, fontFamily, size){
+      const canvasSpaces = AR_RE.test(String(text));
       function measure(tok){
-        const ar = hasArabic(tok) ? arabicWidthPt(tok, true, false, size) : null;
+        const ar = (hasArabic(tok) || (canvasSpaces && /^\s+$/.test(tok))) ? arabicWidthPt(tok, true, false, size) : null;
         if(ar != null) return ar;
         pdf.setFont(fontFamily, 'bold');
         pdf.setFontSize(size);
@@ -1647,29 +1655,19 @@ if(block.type === 'h3'){
     // Render a segment line at baseline y, starting at x. Returns nothing.
     function drawSegments(segments, x, baselineY, fontFamily, size, color){
       const serif = fontFamily === FONT_SERIF;
-      function segW(s){
-        const ar = hasArabic(s.text) ? arabicWidthPt(s.text, s.bold, s.italic, size) : null;
-        if(ar != null) return ar;
-        pdf.setFont(fontFamily, s.bold ? 'bold' : (s.italic ? 'italic' : 'normal'));
-        pdf.setFontSize(size);
-        return pdf.getTextWidth(s.text);
-      }
       pdf.setTextColor(...color);
-      // A line that begins with Arabic renders right-to-left, right-aligned.
-      if(segments.length && hasArabic(segments[0].text)){
-        let rx = contentRight;
-        segments.forEach(s=>{
-          const w = segW(s);
-          rx -= w;
-          if(hasArabic(s.text)){
-            const spr = arabicSprite(s.text, s.bold, s.italic, size, color, serif);
-            if(spr){ pdf.addImage(spr.img, 'PNG', rx, baselineY - spr.aPt, spr.wPt, spr.aPt + spr.dPt); return; }
-          }
-          pdf.setFont(fontFamily, s.bold ? 'bold' : (s.italic ? 'italic' : 'normal'));
-          pdf.setFontSize(size);
-          pdf.text(s.text, rx, baselineY);
-        });
-        return;
+      // Any Arabic in the line: rasterize the whole line (logical order) and
+      // right-align it, so it starts from the right margin and the canvas text
+      // engine applies correct shaping + bidi inside the single image.
+      if(segments.some(s => hasArabic(s.text))){
+        const lineText = segments.map(s => s.text).join('');
+        let bold = false, italic = false;
+        for(const s of segments){ if(hasArabic(s.text)){ bold = s.bold; italic = s.italic; break; } }
+        const spr = arabicSprite(lineText, bold, italic, size, color, serif);
+        if(spr){
+          pdf.addImage(spr.img, 'PNG', contentRight - spr.wPt, baselineY - spr.aPt, spr.wPt, spr.aPt + spr.dPt);
+          return;
+        }
       }
       let cx = x;
       segments.forEach(s=>{
